@@ -44,6 +44,11 @@
 
     typedef std::array<std::string, BC_NUM_COLORS> BracketColorArray;
 
+    /*
+     * These were copied from VS Code
+     * TODO: Make this user configurable, get from theme?
+     */ 
+
     static const BracketColorArray sDarkBackgroundColors {
         { "#FF00FF", "#FFFF00", "#00FFFF" }
     };
@@ -52,8 +57,11 @@
         { "#008000", "#000080", "#800000"}
     };
 
-    // styles that indicate comment, string, docstring, etc.
-    // discovered from trial and error, better way to get this?
+    /*
+     * styles that indicate comment, string, docstring, etc.
+     * discovered from trial and error, better way to get this?
+     */
+     
     static const std::set<guint> sIgnoreStyles { 1, 2, 3, 4, 6, 7, 9 };
 
     // start index of indicators our plugin will use
@@ -103,8 +111,12 @@
             for (guint i = 0; i < BracketType::COUNT; i++) {
                 bracketColorsEnable[i] = TRUE;
             }
-            // color matching angle brackets seems to cause
-            // more confusion than its worth
+            
+            /*
+             * color matching angle brackets seems to cause
+             * more confusion than its worth
+             */
+             
             bracketColorsEnable[BracketType::ANGLE] = FALSE;
         }
 
@@ -759,12 +771,12 @@
         not indiciesToRemove.size() and
         not indiciesToRecompute.size()
     ) {
-        g_debug("%s: Nothing to do", __FUNCTION__);
+        //g_debug("%s: Nothing to do", __FUNCTION__);
         return FALSE;
     }
 
     for (const auto &it : indiciesToRemove) {
-        g_debug("%s: Removing brace at %d", __FUNCTION__, it);
+        //g_debug("%s: Removing brace at %d", __FUNCTION__, it);
         bracketMap.mBracketMap.erase(it);
         bracketColorsData.RemoveFromQueues(it);
     }
@@ -1024,10 +1036,6 @@
     }
 
     if (data->updateUI) {
-        g_debug(
-            "%s: have to redraw %d indicies",
-            __FUNCTION__, data->redrawIndicies.size()
-        );
         render_document(sci, data);
     }
 
