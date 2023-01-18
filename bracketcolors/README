@@ -1,0 +1,31 @@
+Color brackets, parenthesis, and braces
+===================
+
+.. contents::
+
+About
+-----
+
+This plugin enables bracket coloring features. Brackets are colored based on
+nesting level
+
+Features
+--------
+
+* Color brackets for: { }, [ ], ( )
+
+Usage
+-----
+
+Install the plugin (https://plugins.geany.org/install.html) then
+load it in Geany's plugin manager. You may change module preferences.
+
+Requirements
+------------
+
+* GTK >= 2.8.0
+
+Contact developers
+------------------
+
+Asif Amin <asifamin(at)utexas(dot)edu>
