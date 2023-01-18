@@ -25,10 +25,7 @@
 #include <set>
 #include <map>
 
-#define G_LOG_USE_STRUCTURED
-#define G_LOG_DOMAIN "bracket-colors"
 #include <glib.h>
-
 #include <geanyplugin.h>
 
 #include "BracketMap.h"
@@ -56,10 +53,10 @@
 
     // styles that indicate comment, string, docstring, etc.
     // discovered from trial and error, better way to get this?
-    static const std::set<int> sIgnoreStyles { 1, 2, 3, 4, 6, 7, 9 };
+    static const std::set<guint> sIgnoreStyles { 1, 2, 3, 4, 6, 7, 9 };
 
     // start index of indicators our plugin will use
-    static const unsigned sIndicatorIndex = INDICATOR_IME - BC_NUM_COLORS;
+    static const guint sIndicatorIndex = INDICATOR_IME - BC_NUM_COLORS;
 
 /* ----------------------------------- TYPES -------------------------------- */
 
@@ -102,7 +99,7 @@
             bracketColors(sLightBackgroundColors),
             init(FALSE)
         {
-            for (int i = 0; i < BracketType::COUNT; i++) {
+            for (guint i = 0; i < BracketType::COUNT; i++) {
                 bracketColorsEnable[i] = TRUE;
             }
             // color matching angle brackets seems to cause
@@ -140,7 +137,7 @@
      * Troubles with custom GObject when
      * loading and unloading plugin.
      */
-    static std::map<uintptr_t, BracketColorsData *> sAllBracketColorsData;
+    static std::map<guintptr, BracketColorsData *> sAllBracketColorsData;
 
 /* --------------------------------- PROTOTYPES ----------------------------- */
 
@@ -196,7 +193,7 @@
 {
     BracketColorsData *newBCD = new BracketColorsData();
 
-    uintptr_t key = reinterpret_cast<uintptr_t>(doc);
+    guintptr key = reinterpret_cast<guintptr>(doc);
 
     auto it = sAllBracketColorsData.find(key);
     if (it != sAllBracketColorsData.end()) {
@@ -329,12 +326,12 @@
     compute bracket at position
 ----------------------------------------------------------------------------- */
 {
-    int matchedBrace = SSM(sci, SCI_BRACEMATCH, position, BC_NO_ARG);
-    int braceIdentity = position;
+    gint matchedBrace = SSM(sci, SCI_BRACEMATCH, position, BC_NO_ARG);
+    gint braceIdentity = position;
 
     if (matchedBrace != -1) {
 
-        int length = matchedBrace - position;
+        gint length = matchedBrace - position;
 
         // g_debug(
         //     "%s: bracket at %d matched at %d",
@@ -381,7 +378,7 @@
     check if position is part of non source section
 ----------------------------------------------------------------------------- */
 {
-    int style = SSM(sci, SCI_GETSTYLEAT, position, BC_NO_ARG);
+    gint style = SSM(sci, SCI_GETSTYLEAT, position, BC_NO_ARG);
     if (sIgnoreStyles.find(style) != sIgnoreStyles.end()) {
         return TRUE;
     }
@@ -401,10 +398,10 @@
     ScintillaObject *sci = data.doc->editor->sci;
 
     gint length = sci_get_length(sci);
-    for (int i = 0; i < length; i++) {
+    for (gint i = 0; i < length; i++) {
         gchar ch = char_at(sci, i);
         if (is_bracket_type(ch, BracketType::COUNT)) {
-            for (int bracketType = 0; bracketType < BracketType::COUNT; bracketType++) {
+            for (gint bracketType = 0; bracketType < BracketType::COUNT; bracketType++) {
                 if (data.bracketColorsEnable[bracketType] == TRUE) {
                     if (is_bracket_type(ch, static_cast<BracketType>(bracketType))) {
                         data.recomputeIndicies.insert(i);
@@ -428,7 +425,7 @@
 ----------------------------------------------------------------------------- */
 {
     gint length = sci_get_length(sci);
-    for (int i = 0; i < BC_NUM_COLORS; i++) {
+    for (gint i = 0; i < BC_NUM_COLORS; i++) {
         SSM(sci, SCI_SETINDICATORCURRENT, sIndicatorIndex + i, BC_NO_ARG);
         SSM(sci, SCI_INDICATORCLEARRANGE, 0, length);
     }
@@ -446,7 +443,7 @@
     assign indicator at position, check if already correct
 ----------------------------------------------------------------------------- */
 {
-    for (int i = 0; i < BracketType::COUNT; i++) {
+    for (gint i = 0; i < BracketType::COUNT; i++) {
 
         const BracketMap &bracketMap = data.bracketMaps[i];
 
@@ -459,7 +456,7 @@
 
         if (BracketMap::GetLength(bracket) != BracketMap::UNDEFINED) {
 
-            std::array<int, 2> positions {
+            std::array<gint, 2> positions {
                 { index, index + BracketMap::GetLength(bracket) }
             };
 
@@ -468,7 +465,7 @@
                 unsigned correctIndicatorIndex = sIndicatorIndex + \
                     ((BracketMap::GetOrder(bracket) + i) % BC_NUM_COLORS);
 
-                int curr = SSM(sci, SCI_INDICATORVALUEAT, correctIndicatorIndex, position);
+                gint curr = SSM(sci, SCI_INDICATORVALUEAT, correctIndicatorIndex, position);
                 if (not curr) {
                     // g_debug(
                     //     "%s: Setting indicator %d at %d",
@@ -486,7 +483,7 @@
 
                 // make sure there arent any other indicators at position
                 for (
-                    int indicatorIndex = sIndicatorIndex;
+                    gint indicatorIndex = sIndicatorIndex;
                     indicatorIndex < sIndicatorIndex + BC_NUM_COLORS;
                     indicatorIndex++
                 )
@@ -495,7 +492,7 @@
                         continue;
                     }
 
-                    int hasIndicator = SSM(sci, SCI_INDICATORVALUEAT, indicatorIndex, position);
+                    gint hasIndicator = SSM(sci, SCI_INDICATORVALUEAT, indicatorIndex, position);
                     if (hasIndicator) {
                         SSM(
                             sci,
@@ -523,14 +520,14 @@
     clear bracket indicators in range
 ----------------------------------------------------------------------------- */
 {
-    for (int i = position; i < position + length; i++) {
+    for (gint i = position; i < position + length; i++) {
         for (
-            int indicatorIndex = sIndicatorIndex;
+            gint indicatorIndex = sIndicatorIndex;
             indicatorIndex < sIndicatorIndex + BC_NUM_COLORS;
             indicatorIndex++
         )
         {
-            int hasIndicator = SSM(sci, SCI_INDICATORVALUEAT, indicatorIndex, i);
+            gint hasIndicator = SSM(sci, SCI_INDICATORVALUEAT, indicatorIndex, i);
             // g_debug("%s: Indicator %d: %d", __FUNCTION__, indicatorIndex, hasIndicator);
             if (hasIndicator) {
                 // g_debug("%s: Clearing bracket at %d", __FUNCTION__, i);
@@ -574,7 +571,7 @@
 
     for (const auto &it : bracketMap.mBracketMap) {
         const auto &bracket = it.second;
-        int endPos = it.first + BracketMap::GetLength(bracket);
+        gint endPos = it.first + BracketMap::GetLength(bracket);
         if (it.first >= position) {
             indiciesToAdjust.insert(it.first);
         }
@@ -589,7 +586,7 @@
     gboolean madeChange = FALSE;
 
     // Check if the new characters that are added were brackets
-    for (int i = position; i < position + length; i++) {
+    for (gint i = position; i < position + length; i++) {
         gchar newChar = char_at(sci, i);
         if (is_bracket_type(newChar, type)) {
             // g_debug("%s: Handling new bracket character", __FUNCTION__);
@@ -652,7 +649,7 @@
 
     for (const auto &it : bracketMap.mBracketMap) {
         const auto &bracket = it.second;
-        int endPos = it.first + BracketMap::GetLength(bracket);
+        gint endPos = it.first + BracketMap::GetLength(bracket);
         // start bracket was deleted
         if ( (it.first >= position) and (it.first < position + length) ) {
             indiciesToRemove.insert(it.first);
@@ -684,7 +681,7 @@
 
     for (const auto &it : indiciesToRecompute) {
         const auto &bracket = bracketMap.mBracketMap.at(it);
-        int endPos = it + BracketMap::GetLength(bracket);
+        gint endPos = it + BracketMap::GetLength(bracket);
 
         // first bracket was moved backwards
         if (it >= position) {
@@ -724,8 +721,8 @@
     ScintillaObject *sci = data->doc->editor->sci;
     g_return_val_if_fail(sci, BC_CONTINUE_ACTION);
 
-    int pos = sci_get_current_position(sci);
-    int style = SSM(sci, SCI_GETSTYLEAT, pos, BC_NO_ARG);
+    gint pos = sci_get_current_position(sci);
+    gint style = SSM(sci, SCI_GETSTYLEAT, pos, BC_NO_ARG);
     gchar newChar = sci_get_char_at(sci, pos);
 
     switch(event->keyval) {
@@ -737,11 +734,11 @@
             );
 
             for (
-                int indicatorIndex = sIndicatorIndex;
+                gint indicatorIndex = sIndicatorIndex;
                 indicatorIndex < sIndicatorIndex + BC_NUM_COLORS;
                 indicatorIndex++
             ) {
-                int hasIndicator = SSM(sci, SCI_INDICATORVALUEAT, indicatorIndex, pos);
+                gint hasIndicator = SSM(sci, SCI_INDICATORVALUEAT, indicatorIndex, pos);
                 g_debug("%s: Indicator %d: %d", __FUNCTION__, indicatorIndex, hasIndicator);
             }
 
@@ -830,7 +827,7 @@
                  * Check to adjust current bracket positions
                  */
 
-                for (int bracketType = 0; bracketType < BracketType::COUNT; bracketType++) {
+                for (gint bracketType = 0; bracketType < BracketType::COUNT; bracketType++) {
                     if (
                         move_brackets(
                             sci,
@@ -850,7 +847,7 @@
                     __FUNCTION__, nt->position, nt->length
                 );
 
-                for (int bracketType = 0; bracketType < BracketType::COUNT; bracketType++) {
+                for (gint bracketType = 0; bracketType < BracketType::COUNT; bracketType++) {
                     if (
                         remove_brackets(
                             sci,
@@ -871,11 +868,11 @@
                 );
 
                 if (data->init == TRUE) {
-                    for (int bracketType = 0; bracketType < BracketType::COUNT; bracketType++) {
+                    for (gint bracketType = 0; bracketType < BracketType::COUNT; bracketType++) {
                         if (data->bracketColorsEnable[bracketType] == FALSE) {
                             continue;
                         }
-                        for (int i = nt->position; i < nt->position + nt->length; i++) {
+                        for (gint i = nt->position; i < nt->position + nt->length; i++) {
                             gchar currChar = char_at(sci, i);
                             if (is_bracket_type(currChar, static_cast<BracketType>(bracketType))) {
                                 //g_debug("%s: Handling style change for bracket at %d", __FUNCTION__, i);
@@ -923,7 +920,7 @@
         if (currDark != wasDark) {
             g_debug("%s: Need to change colors scheme!", __FUNCTION__);
             data->bracketColors = currDark ? sDarkBackgroundColors : sLightBackgroundColors;
-            for (int i = 0; i < data->bracketColors.size(); i++) {
+            for (gint i = 0; i < data->bracketColors.size(); i++) {
                 gint index = sIndicatorIndex + i;
                 const std::string &spec = data->bracketColors.at(i);
                 gint color = utils_parse_color_to_bgr(spec.c_str());
@@ -987,7 +984,7 @@
             numIterations++
         )
         {
-            for (int bracketType = 0; bracketType < BracketType::COUNT; bracketType++) {
+            for (gint bracketType = 0; bracketType < BracketType::COUNT; bracketType++) {
 
                 BracketMap &bracketMap = data->bracketMaps[bracketType];
 
@@ -1039,7 +1036,7 @@
     g_return_if_fail(DOC_VALID(doc));
     g_debug("%s: closing document '%d'", __FUNCTION__, doc->id);
 
-    auto it = sAllBracketColorsData.find(reinterpret_cast<uintptr_t>(doc));
+    auto it = sAllBracketColorsData.find(reinterpret_cast<guintptr>(doc));
     if (it != sAllBracketColorsData.end()) {
         BracketColorsData *data = it->second;
         if (data->computeTimeoutID > 0) {
@@ -1053,7 +1050,7 @@
         }
 
         delete data;
-        sAllBracketColorsData.erase(reinterpret_cast<uintptr_t>(doc));
+        sAllBracketColorsData.erase(reinterpret_cast<guintptr>(doc));
     }
 
     ScintillaObject *sci = doc->editor->sci;
@@ -1081,7 +1078,7 @@
         return;
     }
 
-    auto it = sAllBracketColorsData.find(reinterpret_cast<uintptr_t>(doc));
+    auto it = sAllBracketColorsData.find(reinterpret_cast<guintptr>(doc));
     if (it == sAllBracketColorsData.end()) {
         g_debug("%s: No data", __FUNCTION__);
         return;
@@ -1142,7 +1139,7 @@
         data->bracketColors = sDarkBackgroundColors;
     }
 
-    for (int i = 0; i < data->bracketColors.size(); i++) {
+    for (gint i = 0; i < data->bracketColors.size(); i++) {
         gint index = sIndicatorIndex + i;
         const std::string &spec = data->bracketColors.at(i);
         gint color = utils_parse_color_to_bgr(spec.c_str());

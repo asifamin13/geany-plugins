@@ -19,12 +19,10 @@
 
 ----------------------------------------------------------------------------- */
 
-#define G_LOG_USE_STRUCTURED
-#define G_LOG_DOMAIN "BracketMap"
-#include <glib.h>
 
 /* --------------------------------- INCLUDES ------------------------------- */
 /* ----- Platform ------- */
+#include <glib.h>
 /* ----- Standard ------- */
 #include <stack>
 #include <set>
@@ -138,13 +136,13 @@
 
     for (const auto it : mBracketMap) {
 
-        const int &startIndex = it.first;
+        const Index &startIndex = it.first;
         const Bracket &bracket = it.second;
 
-        int length = std::get<0>(bracket);
-        int order = std::get<1>(bracket);
+        Length length = std::get<0>(bracket);
+        Order order = std::get<1>(bracket);
 
-        int end = -1;
+        Index end = -1;
         if (length > 0) {
             end = startIndex + length;
         }

@@ -24,6 +24,7 @@
 
 /* --------------------------------- INCLUDES ------------------------------- */
 /* ----- Platform ------- */
+#include <glib.h>
 /* ----- Standard ------- */
 #include <map>
 #include <tuple>
@@ -47,7 +48,7 @@
     Purpose:    data structure which stores and computes nesting order
 ----------------------------------------------------------------------------- */
 {
-    typedef int Length, Order, Index;
+    typedef gint Length, Order, Index;
     typedef std::tuple<Length, Order> Bracket;
     std::map<Index, Bracket> mBracketMap;
 
@@ -59,7 +60,7 @@
     void Update(Index index, Length length);
     void ComputeOrder();
 
-    static const int UNDEFINED = -1;
+    static const gint UNDEFINED = -1;
 
     static Length& GetLength(Bracket &bracket) {
         return std::get<0>(bracket);
