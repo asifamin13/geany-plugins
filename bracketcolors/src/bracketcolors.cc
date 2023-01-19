@@ -30,7 +30,6 @@
 #include "sciwrappers.h"
 
 #include "BracketMap.h"
-#include "utils.h"
 
 #define BC_NUM_COLORS 3
 #define BC_NO_ARG 0
@@ -122,20 +121,9 @@
 
         ~BracketColorsData() {}
 
-        void RemoveFromQueues(BracketMap::Index index) {
-            {
-                auto it = recomputeIndicies.find(index);
-                if (it != recomputeIndicies.end()) {
-                    recomputeIndicies.erase(it);
-                }
-            }
-            {
-                auto it = redrawIndicies.find(index);
-                if (it != redrawIndicies.end()) {
-                    redrawIndicies.erase(it);
-                }
-            }
-        }
+        void RemoveFromQueues(BracketMap::Index index);
+        void StartTimers();
+        void StopTimers();
     };
 
 /* ---------------------------------- EXTERNS ------------------------------- */
@@ -154,7 +142,94 @@
 
 /* --------------------------------- PROTOTYPES ----------------------------- */
 
+    static gboolean recompute_brackets_timeout(gpointer user_data);
+    static gboolean render_brackets_timeout(gpointer user_data);
+
 /* ------------------------------ IMPLEMENTATION ---------------------------- */
+
+
+// -----------------------------------------------------------------------------
+    void BracketColorsData::StartTimers()
+
+/*
+
+----------------------------------------------------------------------------- */
+{
+    if (computeTimeoutID == 0) {
+        computeTimeoutID = g_timeout_add_full(
+            G_PRIORITY_LOW,
+            20,
+            recompute_brackets_timeout,
+            this,
+            NULL
+        );
+    }
+    else {
+        g_debug("%s: computeTimeoutID already set", __FUNCTION__);
+    }
+
+    if (drawTimeoutID == 0) {
+        drawTimeoutID = g_timeout_add_full(
+            G_PRIORITY_LOW,
+            100,
+            render_brackets_timeout,
+            this,
+            NULL
+        );
+    }
+    else {
+        g_debug("%s: drawTimeoutID already set", __FUNCTION__);
+    }
+}
+
+
+
+// -----------------------------------------------------------------------------
+    void BracketColorsData::StopTimers()
+
+/*
+
+----------------------------------------------------------------------------- */
+{
+    if (computeTimeoutID > 0) {
+        g_source_remove(computeTimeoutID);
+        computeTimeoutID = 0;
+    }
+    else {
+        g_debug("%s: computeTimeoutID already 0", __FUNCTION__);
+    }
+
+    if (drawTimeoutID > 0) {
+        g_source_remove(drawTimeoutID);
+        drawTimeoutID = 0;
+    }
+    else {
+        g_debug("%s: drawTimeoutID already 0", __FUNCTION__);
+    }
+}
+
+
+
+// -----------------------------------------------------------------------------
+    void BracketColorsData::RemoveFromQueues(BracketMap::Index index)
+
+/*
+
+----------------------------------------------------------------------------- */
+{
+    {
+        auto it = recomputeIndicies.find(index);
+        if (it != recomputeIndicies.end()) {
+            recomputeIndicies.erase(it);
+        }
+    }
+    {
+        auto it = redrawIndicies.find(index);
+        if (it != redrawIndicies.end()) {
+            redrawIndicies.erase(it);
+        }
+    }
+}
 
 
 // -----------------------------------------------------------------------------
@@ -993,7 +1068,7 @@
 
 
 // -----------------------------------------------------------------------------
-    static gboolean render_brackets_timeout(
+    gboolean render_brackets_timeout(
         gpointer user_data
     )
 /*
@@ -1001,9 +1076,8 @@
 ----------------------------------------------------------------------------- */
 {
     BracketColorsData *data = reinterpret_cast<BracketColorsData *>(user_data);
-
     if (not isCurrDocument(data)) {
-        data->drawTimeoutID = 0;
+        data->StopTimers();
         return FALSE;
     }
 
@@ -1045,7 +1119,7 @@
 
 
 // -----------------------------------------------------------------------------
-    static gboolean recompute_brackets_timeout(
+    gboolean recompute_brackets_timeout(
         gpointer user_data
     )
 /*
@@ -1056,7 +1130,7 @@
 
     BracketColorsData *data = reinterpret_cast<BracketColorsData *>(user_data);
     if (not isCurrDocument(data)) {
-        data->computeTimeoutID = 0;
+        data->StopTimers();
         return FALSE;
     }
 
@@ -1136,15 +1210,7 @@
     auto it = sAllBracketColorsData.find(reinterpret_cast<guintptr>(doc));
     if (it != sAllBracketColorsData.end()) {
         BracketColorsData *data = it->second;
-        if (data->computeTimeoutID > 0) {
-            g_source_remove(data->computeTimeoutID);
-            data->computeTimeoutID = 0;
-        }
-
-        if (data->drawTimeoutID > 0) {
-            g_source_remove(data->drawTimeoutID);
-            data->drawTimeoutID = 0;
-        }
+        data->StopTimers();
 
         delete data;
         sAllBracketColorsData.erase(reinterpret_cast<guintptr>(doc));
@@ -1152,6 +1218,8 @@
 
     ScintillaObject *sci = doc->editor->sci;
     remove_bc_indicators(sci);
+
+    g_debug("%s: finished close routine", __FUNCTION__);
 }
 
 
@@ -1177,21 +1245,7 @@
     BracketColorsData *data = it->second;
     g_debug("%s: got page switch to doc ID: %d", __FUNCTION__, data->doc->id);
 
-    data->computeTimeoutID = g_timeout_add_full(
-        G_PRIORITY_LOW,
-        20,
-        recompute_brackets_timeout,
-        data,
-        NULL
-    );
-
-    data->drawTimeoutID = g_timeout_add_full(
-        G_PRIORITY_LOW,
-        100,
-        render_brackets_timeout,
-        data,
-        NULL
-    );
+    data->StartTimers();
 }
 
 
@@ -1243,57 +1297,8 @@
         SSM(sci, SCI_INDICSETSTYLE, index, INDIC_TEXTFORE);
         SSM(sci, SCI_INDICSETFORE, index, color);
     }
-}
 
-
-
-// -----------------------------------------------------------------------------
-    static void on_geany_startup_complete(
-        gpointer user_data
-    )
-/*
-
------------------------------------------------------------------------------ */
-{
-    g_debug("%s: startup complete!", __FUNCTION__);
-
-    GtkNotebook *notebook = GTK_NOTEBOOK(geany_data->main_widgets->notebook);
-    gint currPage = gtk_notebook_get_current_page(notebook);
-    GeanyDocument *currDoc = document_get_from_page(currPage);
-
-    if (currDoc != NULL) {
-
-        guintptr key = reinterpret_cast<guintptr>(currDoc);
-        auto it = sAllBracketColorsData.find(key);
-        if (it != sAllBracketColorsData.end()) {
-
-            BracketColorsData *data = it->second;
-
-            data->computeTimeoutID = g_timeout_add_full(
-                G_PRIORITY_LOW,
-                20,
-                recompute_brackets_timeout,
-                data,
-                NULL
-            );
-
-            data->drawTimeoutID = g_timeout_add_full(
-                G_PRIORITY_LOW,
-                100,
-                render_brackets_timeout,
-                data,
-                NULL
-            );
-
-        }
-        else {
-            g_debug("%s: no bracket data yet", __FUNCTION__);
-        }
-    }
-    else {
-        g_debug("%s: no curr doc yet", __FUNCTION__);
-    }
-
+    data->StartTimers();
 }
 
 
@@ -1331,13 +1336,6 @@
         NULL, "document-activate",
         FALSE,
         G_CALLBACK(on_document_activate), NULL
-    );
-
-    plugin_signal_connect(
-        plugin,
-        NULL, "geany-startup-complete",
-        FALSE,
-        G_CALLBACK(on_geany_startup_complete), NULL
     );
 
     return TRUE;
