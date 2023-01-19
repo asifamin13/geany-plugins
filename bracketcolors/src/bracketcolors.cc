@@ -20,6 +20,7 @@
 
 
 /* --------------------------------- INCLUDES ------------------------------- */
+#include <string>
 #include <array>
 #include <set>
 #include <map>
@@ -48,12 +49,12 @@
      * TODO: Make this user configurable, get from theme?
      */
 
-    static const BracketColorArray sDarkBackgroundColors {
-        { "#FF00FF", "#FFFF00", "#00FFFF" }
+    static const BracketColorArray sDarkBackgroundColors = {
+        "#FF00FF", "#FFFF00", "#00FFFF"
     };
 
-    static const BracketColorArray sLightBackgroundColors {
-        { "#008000", "#000080", "#800000"}
+    static const BracketColorArray sLightBackgroundColors = {
+        "#008000", "#000080", "#800000"
     };
 
     /*
@@ -317,6 +318,27 @@
 ----------------------------------------------------------------------------- */
 {
     return sci_get_char_at(sci, pos);
+}
+
+
+
+// -----------------------------------------------------------------------------
+    static void assign_indicator_colors(
+        BracketColorsData *data
+    )
+/*
+
+----------------------------------------------------------------------------- */
+{
+    ScintillaObject *sci = data->doc->editor->sci;
+
+    for (gint i = 0; i < data->bracketColors.size(); i++) {
+        gint index = sIndicatorIndex + i;
+        std::string spec = data->bracketColors.at(i);
+        gint color = utils_parse_color_to_bgr(spec.c_str());
+        SSM(sci, SCI_INDICSETSTYLE, index, INDIC_TEXTFORE);
+        SSM(sci, SCI_INDICSETFORE, index, color);
+    }
 }
 
 
@@ -1096,14 +1118,7 @@
         if (currDark != wasDark) {
             g_debug("%s: Need to change colors scheme!", __FUNCTION__);
             data->bracketColors = currDark ? sDarkBackgroundColors : sLightBackgroundColors;
-            for (gint i = 0; i < data->bracketColors.size(); i++) {
-                gint index = sIndicatorIndex + i;
-                const std::string &spec = data->bracketColors.at(i);
-                gint color = utils_parse_color_to_bgr(spec.c_str());
-                SSM(sci, SCI_INDICSETSTYLE, index, INDIC_TEXTFORE);
-                SSM(sci, SCI_INDICSETFORE, index, color);
-            }
-
+            assign_indicator_colors(data);
         }
 
         data->backgroundColor = currBGColor;
@@ -1290,13 +1305,7 @@
         data->bracketColors = sDarkBackgroundColors;
     }
 
-    for (gint i = 0; i < data->bracketColors.size(); i++) {
-        gint index = sIndicatorIndex + i;
-        const std::string &spec = data->bracketColors.at(i);
-        gint color = utils_parse_color_to_bgr(spec.c_str());
-        SSM(sci, SCI_INDICSETSTYLE, index, INDIC_TEXTFORE);
-        SSM(sci, SCI_INDICSETFORE, index, color);
-    }
+    assign_indicator_colors(data);
 
     data->StartTimers();
 }
