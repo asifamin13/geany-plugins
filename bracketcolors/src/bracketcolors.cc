@@ -47,7 +47,7 @@
     /*
      * These were copied from VS Code
      * TODO: Make this user configurable, get from theme?
-     */ 
+     */
 
     static const BracketColorArray sDarkBackgroundColors {
         { "#FF00FF", "#FFFF00", "#00FFFF" }
@@ -61,8 +61,8 @@
      * styles that indicate comment, string, docstring, etc.
      * discovered from trial and error, better way to get this?
      */
-     
-    static const std::set<guint> sIgnoreStyles { 1, 2, 3, 4, 6, 7, 9 };
+
+    static const std::set<guint> sIgnoreStyles { 1, 2, 3, 4, 5, 6, 9 };
 
     // start index of indicators our plugin will use
     static const guint sIndicatorIndex = INDICATOR_IME - BC_NUM_COLORS;
@@ -111,12 +111,12 @@
             for (guint i = 0; i < BracketType::COUNT; i++) {
                 bracketColorsEnable[i] = TRUE;
             }
-            
+
             /*
              * color matching angle brackets seems to cause
              * more confusion than its worth
              */
-             
+
             bracketColorsEnable[BracketType::ANGLE] = FALSE;
         }
 
@@ -258,7 +258,7 @@
     gint currPage = gtk_notebook_get_current_page(notebook);
     GeanyDocument *currDoc = document_get_from_page(currPage);
 
-    if (currDoc == data->doc) {
+    if (currDoc != NULL and currDoc == data->doc) {
         return TRUE;
     }
 
@@ -835,14 +835,14 @@
                 __FUNCTION__, pos, style, newChar
             );
 
-            for (
-                gint indicatorIndex = sIndicatorIndex;
-                indicatorIndex < sIndicatorIndex + BC_NUM_COLORS;
-                indicatorIndex++
-            ) {
-                gint hasIndicator = SSM(sci, SCI_INDICATORVALUEAT, indicatorIndex, pos);
-                g_debug("%s: Indicator %d: %d", __FUNCTION__, indicatorIndex, hasIndicator);
-            }
+            // for (
+            //     gint indicatorIndex = sIndicatorIndex;
+            //     indicatorIndex < sIndicatorIndex + BC_NUM_COLORS;
+            //     indicatorIndex++
+            // ) {
+            //     gint hasIndicator = SSM(sci, SCI_INDICATORVALUEAT, indicatorIndex, pos);
+            //     g_debug("%s: Indicator %d: %d", __FUNCTION__, indicatorIndex, hasIndicator);
+            // }
 
             break;
         }
@@ -1001,7 +1001,6 @@
 ----------------------------------------------------------------------------- */
 {
     BracketColorsData *data = reinterpret_cast<BracketColorsData *>(user_data);
-    ScintillaObject *sci = data->doc->editor->sci;
 
     if (not isCurrDocument(data)) {
         data->drawTimeoutID = 0;
@@ -1012,6 +1011,7 @@
      * check if background color changed
      */
 
+    ScintillaObject *sci = data->doc->editor->sci;
     guint32 currBGColor = SSM(sci, SCI_STYLEGETBACK, STYLE_DEFAULT, BC_NO_ARG);
     if (currBGColor != data->backgroundColor) {
         g_debug("%s: background color changed: %#04x", __FUNCTION__, currBGColor);
@@ -1039,7 +1039,6 @@
         render_document(sci, data);
     }
 
-
     return TRUE;
 }
 
@@ -1056,8 +1055,6 @@
     static const unsigned sIterationLimit = 50;
 
     BracketColorsData *data = reinterpret_cast<BracketColorsData *>(user_data);
-    ScintillaObject *sci = data->doc->editor->sci;
-
     if (not isCurrDocument(data)) {
         data->computeTimeoutID = 0;
         return FALSE;
@@ -1069,6 +1066,8 @@
     }
 
     if (data->recomputeIndicies.size()) {
+
+        ScintillaObject *sci = data->doc->editor->sci;
 
         g_debug(
             "%s: have to recompute %d indicies",
@@ -1158,23 +1157,16 @@
 
 
 // -----------------------------------------------------------------------------
-    static void on_notebook_page_switch(
-        GtkNotebook *self,
-        GtkWidget *page,
-        guint page_num,
+    static void on_document_activate(
+        GObject *obj,
+        GeanyDocument *doc,
         gpointer user_data
     )
 /*
 
 ----------------------------------------------------------------------------- */
 {
-    g_debug("%s: handling page switch to %d", __FUNCTION__, page_num);
-
-    GeanyDocument *doc = document_get_from_page(page_num);
-    if (doc == NULL) {
-        g_debug("%s: Null doc", __FUNCTION__);
-        return;
-    }
+    g_debug("%s: handling document activate", __FUNCTION__);
 
     auto it = sAllBracketColorsData.find(reinterpret_cast<guintptr>(doc));
     if (it == sAllBracketColorsData.end()) {
@@ -1183,7 +1175,7 @@
     }
 
     BracketColorsData *data = it->second;
-    g_debug("%s: got page switch to '%d'", __FUNCTION__, data->doc->id);
+    g_debug("%s: got page switch to doc ID: %d", __FUNCTION__, data->doc->id);
 
     data->computeTimeoutID = g_timeout_add_full(
         G_PRIORITY_LOW,
@@ -1228,6 +1220,13 @@
         G_CALLBACK(on_sci_notify), data
     );
 
+	// plugin_signal_connect(
+    //     geany_plugin,
+    //     G_OBJECT(sci), "key-press-event",
+	// 	   FALSE,
+    //     G_CALLBACK(snoop_at_key_press), data
+    // );
+
     /*
      * Setup our bracket indicators
      */
@@ -1244,26 +1243,56 @@
         SSM(sci, SCI_INDICSETSTYLE, index, INDIC_TEXTFORE);
         SSM(sci, SCI_INDICSETFORE, index, color);
     }
+}
 
-    /*
-     * timeout to recompute brackets
-     */
 
-    data->computeTimeoutID = g_timeout_add_full(
-        G_PRIORITY_LOW,
-        20,
-        recompute_brackets_timeout,
-        data,
-        NULL
-    );
 
-    data->drawTimeoutID = g_timeout_add_full(
-        G_PRIORITY_LOW,
-        100,
-        render_brackets_timeout,
-        data,
-        NULL
-    );
+// -----------------------------------------------------------------------------
+    static void on_geany_startup_complete(
+        gpointer user_data
+    )
+/*
+
+----------------------------------------------------------------------------- */
+{
+    g_debug("%s: startup complete!", __FUNCTION__);
+
+    GtkNotebook *notebook = GTK_NOTEBOOK(geany_data->main_widgets->notebook);
+    gint currPage = gtk_notebook_get_current_page(notebook);
+    GeanyDocument *currDoc = document_get_from_page(currPage);
+
+    if (currDoc != NULL) {
+
+        guintptr key = reinterpret_cast<guintptr>(currDoc);
+        auto it = sAllBracketColorsData.find(key);
+        if (it != sAllBracketColorsData.end()) {
+
+            BracketColorsData *data = it->second;
+
+            data->computeTimeoutID = g_timeout_add_full(
+                G_PRIORITY_LOW,
+                20,
+                recompute_brackets_timeout,
+                data,
+                NULL
+            );
+
+            data->drawTimeoutID = g_timeout_add_full(
+                G_PRIORITY_LOW,
+                100,
+                render_brackets_timeout,
+                data,
+                NULL
+            );
+
+        }
+        else {
+            g_debug("%s: no bracket data yet", __FUNCTION__);
+        }
+    }
+    else {
+        g_debug("%s: no curr doc yet", __FUNCTION__);
+    }
 
 }
 
@@ -1292,16 +1321,23 @@
 
     plugin_signal_connect(
         plugin,
-        G_OBJECT(geany_data->main_widgets->notebook), "switch-page",
-        TRUE,
-        G_CALLBACK(on_notebook_page_switch), NULL
+        NULL, "document-close",
+        FALSE,
+        G_CALLBACK(on_document_close), NULL
     );
 
     plugin_signal_connect(
         plugin,
-        NULL, "document-close",
+        NULL, "document-activate",
         FALSE,
-        G_CALLBACK(on_document_close), NULL
+        G_CALLBACK(on_document_activate), NULL
+    );
+
+    plugin_signal_connect(
+        plugin,
+        NULL, "geany-startup-complete",
+        FALSE,
+        G_CALLBACK(on_geany_startup_complete), NULL
     );
 
     return TRUE;
