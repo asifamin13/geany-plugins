@@ -59,6 +59,8 @@
         "#008000", "#000080", "#800000"
     };
 
+    static const gchar *sPluginName = "bracketcolors";
+
     /*
      * styles that indicate comment, string, docstring, etc.
      * discovered from trial and error, better way to get this?
@@ -134,15 +136,6 @@
     GeanyPlugin *geany_plugin;
     GeanyData *geany_data;
 
-/* ---------------------------------- GLOBALS ------------------------------- */
-
-    /*
-     * TODO: figure out how to remove this.
-     * Troubles with custom GObject when
-     * loading and unloading plugin.
-     */
-    static std::map<guintptr, BracketColorsData *> sAllBracketColorsData;
-
 /* --------------------------------- PROTOTYPES ----------------------------- */
 
     static gboolean recompute_brackets_timeout(gpointer user_data);
@@ -168,7 +161,7 @@
         );
     }
     else {
-        g_debug("%s: computeTimeoutID already set", __FUNCTION__);
+        //g_debug("%s: computeTimeoutID already set", __FUNCTION__);
     }
 
     if (drawTimeoutID == 0) {
@@ -181,7 +174,7 @@
         );
     }
     else {
-        g_debug("%s: drawTimeoutID already set", __FUNCTION__);
+        //g_debug("%s: drawTimeoutID already set", __FUNCTION__);
     }
 }
 
@@ -199,7 +192,7 @@
         computeTimeoutID = 0;
     }
     else {
-        g_debug("%s: computeTimeoutID already 0", __FUNCTION__);
+        //g_debug("%s: computeTimeoutID already 0", __FUNCTION__);
     }
 
     if (drawTimeoutID > 0) {
@@ -207,7 +200,7 @@
         drawTimeoutID = 0;
     }
     else {
-        g_debug("%s: drawTimeoutID already 0", __FUNCTION__);
+        //g_debug("%s: drawTimeoutID already 0", __FUNCTION__);
     }
 }
 
@@ -344,6 +337,18 @@
 }
 
 
+// -----------------------------------------------------------------------------
+    static gboolean hasDocument(void)
+/*
+    sanity check
+----------------------------------------------------------------------------- */
+{
+    GtkNotebook *notebook = GTK_NOTEBOOK(geany_data->main_widgets->notebook);
+    gint currPage = gtk_notebook_get_current_page(notebook);
+    return currPage >= 0 ? TRUE : FALSE;
+}
+
+
 
 // -----------------------------------------------------------------------------
     static gboolean isCurrDocument(
@@ -367,21 +372,18 @@
 
 
 // -----------------------------------------------------------------------------
-    static void bracket_colors_data_purge_all()
+    static void bracket_colors_data_free(gpointer data)
 /*
 
 ----------------------------------------------------------------------------- */
 {
-    for (auto it : sAllBracketColorsData) {
-        g_debug(
-            "%s: Purging BracketColorsData for key '%d'",
-            __FUNCTION__, it.first
-        );
+    // g_debug(
+    //     "%s: Purging a BracketColorsData",
+    //     __FUNCTION__
+    // );
 
-        delete it.second;
-    }
-
-    sAllBracketColorsData.clear();
+    BracketColorsData *bcd = reinterpret_cast<BracketColorsData *>(data);
+    delete bcd;
 }
 
 
@@ -394,18 +396,13 @@
 {
     BracketColorsData *newBCD = new BracketColorsData();
 
-    guintptr key = reinterpret_cast<guintptr>(doc);
-
-    auto it = sAllBracketColorsData.find(key);
-    if (it != sAllBracketColorsData.end()) {
-        delete it->second;
-        it->second = newBCD;
-    }
-    else {
-        sAllBracketColorsData.insert(
-            std::make_pair(key, newBCD)
-        );
-    }
+    plugin_set_document_data_full(
+        geany_plugin,
+        doc,
+        sPluginName,
+        newBCD,
+        bracket_colors_data_free
+    );
 
     return newBCD;
 }
@@ -1091,7 +1088,12 @@
 
 ----------------------------------------------------------------------------- */
 {
+    if (not hasDocument()) {
+        return FALSE;
+    }
+
     BracketColorsData *data = reinterpret_cast<BracketColorsData *>(user_data);
+
     if (not isCurrDocument(data)) {
         data->StopTimers();
         return FALSE;
@@ -1136,6 +1138,10 @@
 ----------------------------------------------------------------------------- */
 {
     static const unsigned sIterationLimit = 50;
+
+    if (not hasDocument()) {
+        return FALSE;
+    }
 
     BracketColorsData *data = reinterpret_cast<BracketColorsData *>(user_data);
     if (not isCurrDocument(data)) {
@@ -1216,13 +1222,11 @@
     g_return_if_fail(DOC_VALID(doc));
     g_debug("%s: closing document '%d'", __FUNCTION__, doc->id);
 
-    auto it = sAllBracketColorsData.find(reinterpret_cast<guintptr>(doc));
-    if (it != sAllBracketColorsData.end()) {
-        BracketColorsData *data = it->second;
+    gpointer pluginData = plugin_get_document_data(geany_plugin, doc, sPluginName);
+    if (pluginData != NULL) {
+        BracketColorsData *data = reinterpret_cast<BracketColorsData *>(pluginData);
+        g_debug("%s: Closing doc ID: %d", __FUNCTION__, data->doc->id);
         data->StopTimers();
-
-        delete data;
-        sAllBracketColorsData.erase(reinterpret_cast<guintptr>(doc));
     }
 
     ScintillaObject *sci = doc->editor->sci;
@@ -1245,16 +1249,12 @@
 {
     g_debug("%s: handling document activate", __FUNCTION__);
 
-    auto it = sAllBracketColorsData.find(reinterpret_cast<guintptr>(doc));
-    if (it == sAllBracketColorsData.end()) {
-        g_debug("%s: No data", __FUNCTION__);
-        return;
+    gpointer pluginData = plugin_get_document_data(geany_plugin, doc, sPluginName);
+    if (pluginData != NULL) {
+        BracketColorsData *data = reinterpret_cast<BracketColorsData *>(pluginData);
+        g_debug("%s: got page switch to doc ID: %d", __FUNCTION__, data->doc->id);
+        data->StartTimers();
     }
-
-    BracketColorsData *data = it->second;
-    g_debug("%s: got page switch to doc ID: %d", __FUNCTION__, data->doc->id);
-
-    data->StartTimers();
 }
 
 
@@ -1298,6 +1298,7 @@
     if (utils_is_dark(data->backgroundColor)) {
         data->bracketColors = sDarkBackgroundColors;
     }
+
     assign_indicator_colors(data);
 
     data->StartTimers();
@@ -1361,8 +1362,6 @@
     {
         on_document_close(NULL, documents[i], NULL);
     }
-
-    bracket_colors_data_purge_all();
 }
 
 
