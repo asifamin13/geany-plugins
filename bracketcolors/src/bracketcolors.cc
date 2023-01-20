@@ -20,11 +20,14 @@
 
 
 /* --------------------------------- INCLUDES ------------------------------- */
+#include <string>
 #include <array>
 #include <set>
 #include <map>
 
 #include <glib.h>
+#include <gdk/gdk.h>
+
 #include <geanyplugin.h>
 
 #include "sciwrappers.h"
@@ -48,12 +51,12 @@
      * TODO: Make this user configurable, get from theme?
      */
 
-    static const BracketColorArray sDarkBackgroundColors {
-        { "#FF00FF", "#FFFF00", "#00FFFF" }
+    static const BracketColorArray sDarkBackgroundColors = {
+        "#FF00FF", "#FFFF00", "#00FFFF"
     };
 
-    static const BracketColorArray sLightBackgroundColors {
-        { "#008000", "#000080", "#800000"}
+    static const BracketColorArray sLightBackgroundColors = {
+        "#008000", "#000080", "#800000"
     };
 
     /*
@@ -61,7 +64,7 @@
      * discovered from trial and error, better way to get this?
      */
 
-    static const std::set<guint> sIgnoreStyles { 1, 2, 3, 4, 5, 6, 9 };
+    static const std::set<guint> sIgnoreStyles { 1, 2, 3, 4, 5, 6, 7, 9 };
 
     // start index of indicators our plugin will use
     static const guint sIndicatorIndex = INDICATOR_IME - BC_NUM_COLORS;
@@ -317,6 +320,27 @@
 ----------------------------------------------------------------------------- */
 {
     return sci_get_char_at(sci, pos);
+}
+
+
+
+// -----------------------------------------------------------------------------
+    static void assign_indicator_colors(
+        BracketColorsData *data
+    )
+/*
+
+----------------------------------------------------------------------------- */
+{
+    ScintillaObject *sci = data->doc->editor->sci;
+
+    for (gint i = 0; i < data->bracketColors.size(); i++) {
+        gint index = sIndicatorIndex + i;
+        std::string spec = data->bracketColors.at(i);
+        gint color = utils_parse_color_to_bgr(spec.c_str());
+        SSM(sci, SCI_INDICSETSTYLE, index, INDIC_TEXTFORE);
+        SSM(sci, SCI_INDICSETFORE, index, color);
+    }
 }
 
 
@@ -772,10 +796,10 @@
         }
     }
 
-    g_debug(
-        "%s: Need to adjust %d brackets, recompute %d brackets",
-        __FUNCTION__, indiciesToAdjust.size(), indiciesToRecompute.size()
-    );
+    // g_debug(
+    //     "%s: Need to adjust %d brackets, recompute %d brackets",
+    //     __FUNCTION__, indiciesToAdjust.size(), indiciesToRecompute.size()
+    // );
 
     if (not indiciesToAdjust.size() and not indiciesToRecompute.size()) {
         //g_debug("%s: Nothing to do", __FUNCTION__);
@@ -837,10 +861,10 @@
         }
     }
 
-    g_debug(
-        "%s: Need to remove %d brackets, adjust %d brackets",
-        __FUNCTION__, indiciesToRemove.size(), indiciesToRecompute.size()
-    );
+    // g_debug(
+    //     "%s: Need to remove %d brackets, adjust %d brackets",
+    //     __FUNCTION__, indiciesToRemove.size(), indiciesToRecompute.size()
+    // );
 
     if (
         not indiciesToRemove.size() and
@@ -905,20 +929,12 @@
     switch(event->keyval) {
         case(GDK_Shift_R): {
             ScintillaObject *sci = data->doc->editor->sci;
-            g_debug(
-                "%s: caught right shift at %d, style: %d, char: '%c'",
-                __FUNCTION__, pos, style, newChar
-            );
-
-            // for (
-            //     gint indicatorIndex = sIndicatorIndex;
-            //     indicatorIndex < sIndicatorIndex + BC_NUM_COLORS;
-            //     indicatorIndex++
-            // ) {
-            //     gint hasIndicator = SSM(sci, SCI_INDICATORVALUEAT, indicatorIndex, pos);
-            //     g_debug("%s: Indicator %d: %d", __FUNCTION__, indicatorIndex, hasIndicator);
-            // }
-
+            if (event->state & GDK_CONTROL_MASK) {
+                g_debug(
+                    "%s: caught snoop at %d, style: %d, char: '%c'",
+                    __FUNCTION__, pos, style, newChar
+                );
+            }
             break;
         }
     }
@@ -938,10 +954,10 @@
 ----------------------------------------------------------------------------- */
 {
     if (data->updateUI) {
-        g_debug(
-            "%s: Need to update %d indicies",
-            __FUNCTION__, data->redrawIndicies.size()
-        );
+        // g_debug(
+        //     "%s: Need to update %d indicies",
+        //     __FUNCTION__, data->redrawIndicies.size()
+        // );
 
         for (
             auto position = data->redrawIndicies.begin();
@@ -992,10 +1008,10 @@
         case(SCN_MODIFIED):
         {
             if (nt->modificationType & SC_MOD_INSERTTEXT) {
-                g_debug(
-                    "%s: Text added. Position: %d, Length: %d",
-                    __FUNCTION__, nt->position, nt->length
-                );
+                // g_debug(
+                //     "%s: Text added. Position: %d, Length: %d",
+                //     __FUNCTION__, nt->position, nt->length
+                // );
 
                 // if we insert into position that had bracket
                 clear_bc_indicators(sci, nt->position, nt->length);
@@ -1019,10 +1035,10 @@
             }
 
             if (nt->modificationType & SC_MOD_DELETETEXT) {
-                g_debug(
-                    "%s: Text removed. Position: %d, Length: %d",
-                    __FUNCTION__, nt->position, nt->length
-                );
+                // g_debug(
+                //     "%s: Text removed. Position: %d, Length: %d",
+                //     __FUNCTION__, nt->position, nt->length
+                // );
 
                 for (gint bracketType = 0; bracketType < BracketType::COUNT; bracketType++) {
                     if (
@@ -1039,10 +1055,10 @@
             }
 
             if (nt->modificationType & SC_MOD_CHANGESTYLE) {
-                g_debug(
-                    "%s: Style change. Position: %d, Length: %d",
-                    __FUNCTION__, nt->position, nt->length
-                );
+                // g_debug(
+                //     "%s: Style change. Position: %d, Length: %d",
+                //     __FUNCTION__, nt->position, nt->length
+                // );
 
                 if (data->init == TRUE) {
                     for (gint bracketType = 0; bracketType < BracketType::COUNT; bracketType++) {
@@ -1096,14 +1112,7 @@
         if (currDark != wasDark) {
             g_debug("%s: Need to change colors scheme!", __FUNCTION__);
             data->bracketColors = currDark ? sDarkBackgroundColors : sLightBackgroundColors;
-            for (gint i = 0; i < data->bracketColors.size(); i++) {
-                gint index = sIndicatorIndex + i;
-                const std::string &spec = data->bracketColors.at(i);
-                gint color = utils_parse_color_to_bgr(spec.c_str());
-                SSM(sci, SCI_INDICSETSTYLE, index, INDIC_TEXTFORE);
-                SSM(sci, SCI_INDICSETFORE, index, color);
-            }
-
+            assign_indicator_colors(data);
         }
 
         data->backgroundColor = currBGColor;
@@ -1143,10 +1152,10 @@
 
         ScintillaObject *sci = data->doc->editor->sci;
 
-        g_debug(
-            "%s: have to recompute %d indicies",
-            __FUNCTION__, data->recomputeIndicies.size()
-        );
+        // g_debug(
+        //     "%s: have to recompute %d indicies",
+        //     __FUNCTION__, data->recomputeIndicies.size()
+        // );
 
         unsigned numIterations = 0;
         for (
@@ -1274,12 +1283,12 @@
         G_CALLBACK(on_sci_notify), data
     );
 
-	// plugin_signal_connect(
-    //     geany_plugin,
-    //     G_OBJECT(sci), "key-press-event",
-	// 	   FALSE,
-    //     G_CALLBACK(snoop_at_key_press), data
-    // );
+	plugin_signal_connect(
+        geany_plugin,
+        G_OBJECT(sci), "key-press-event",
+		   FALSE,
+        G_CALLBACK(snoop_at_key_press), data
+    );
 
     /*
      * Setup our bracket indicators
@@ -1289,14 +1298,7 @@
     if (utils_is_dark(data->backgroundColor)) {
         data->bracketColors = sDarkBackgroundColors;
     }
-
-    for (gint i = 0; i < data->bracketColors.size(); i++) {
-        gint index = sIndicatorIndex + i;
-        const std::string &spec = data->bracketColors.at(i);
-        gint color = utils_parse_color_to_bgr(spec.c_str());
-        SSM(sci, SCI_INDICSETSTYLE, index, INDIC_TEXTFORE);
-        SSM(sci, SCI_INDICSETFORE, index, color);
-    }
+    assign_indicator_colors(data);
 
     data->StartTimers();
 }

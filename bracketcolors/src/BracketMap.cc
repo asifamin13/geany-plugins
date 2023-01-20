@@ -21,8 +21,6 @@
 #include <stack>
 #include <set>
 
-#include <glib.h>
-
 #include "BracketMap.h"
 
 
