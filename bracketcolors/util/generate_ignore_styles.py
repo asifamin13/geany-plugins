@@ -81,7 +81,6 @@ def make_style_mapping(macros, filters):
     for fileType in fileTypes:
         key = fileType.split('_')[1]
         if fileType in keyAdjustment.keys():
-            #print("adjusting key {} to {}".format(key, keyAdjustment[fileType]))
             key = keyAdjustment[fileType]
         keyPrefix = "SCE_{}_".format(key)
         styleKeysAll = [
@@ -98,8 +97,6 @@ def make_style_mapping(macros, filters):
                 styleKeysFiltered.append(styleKey)
         if len(styleKeysFiltered):
             lexerBracketIgnoreStyles[fileType] = styleKeysFiltered
-        else:
-            print("cant get style keys for {}".format(fileType))
     return lexerBracketIgnoreStyles
 
 def find_scilexer():
@@ -129,6 +126,12 @@ def main(args):
         help="file to write mapping header to",
         default="bracketcolors-ignore-styles.h"
     )
+    
+    parser.add_argument(
+        '--stdout',
+        action='store_true',
+        help="send to stdout"
+    )
 
     parser.add_argument(
         '--filters',
@@ -144,15 +147,17 @@ def main(args):
     args = parser.parse_args()
 
     if (not os.path.isfile(args.sci_lexer)):
-        print("Does not exist: {}".format(args.sci_lexer))
         sys.exit(1)
 
     macros = parse_file(args.sci_lexer)
     lexerBracketIgnoreStyles = make_style_mapping(macros, args.filters)
 
     headerStr = make_header_str(lexerBracketIgnoreStyles)
-    with open(args.out_file, 'w') as f:
-        f.write(headerStr)
+    if not args.stdout:
+        with open(args.out_file, 'w') as f:
+            f.write(headerStr)
+    else:
+        print(headerStr)
 
     return 0
 
