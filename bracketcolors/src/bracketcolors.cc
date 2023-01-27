@@ -1183,19 +1183,19 @@
 ----------------------------------------------------------------------------- */
 {
     g_return_if_fail(DOC_VALID(doc));
-    g_debug("%s: closing document '%d'", __FUNCTION__, doc->id);
+    //g_debug("%s: closing document '%d'", __FUNCTION__, doc->id);
 
     gpointer pluginData = plugin_get_document_data(geany_plugin, doc, sPluginName);
     if (pluginData != NULL) {
         BracketColorsData *data = reinterpret_cast<BracketColorsData *>(pluginData);
-        g_debug("%s: Closing doc ID: %d", __FUNCTION__, data->doc->id);
+        //g_debug("%s: Closing doc ID: %d", __FUNCTION__, data->doc->id);
         data->StopTimers();
     }
 
     ScintillaObject *sci = doc->editor->sci;
     remove_bc_indicators(sci);
 
-    g_debug("%s: finished close routine", __FUNCTION__);
+    //g_debug("%s: finished close routine", __FUNCTION__);
 }
 
 
@@ -1210,12 +1210,12 @@
 
 ----------------------------------------------------------------------------- */
 {
-    g_debug("%s: handling document activate", __FUNCTION__);
+    //g_debug("%s: handling document activate", __FUNCTION__);
 
     gpointer pluginData = plugin_get_document_data(geany_plugin, doc, sPluginName);
     if (pluginData != NULL) {
         BracketColorsData *data = reinterpret_cast<BracketColorsData *>(pluginData);
-        g_debug("%s: got page switch to doc ID: %d", __FUNCTION__, data->doc->id);
+        //g_debug("%s: got page switch to doc ID: %d", __FUNCTION__, data->doc->id);
         data->StartTimers();
     }
 }
@@ -1233,7 +1233,7 @@
 ----------------------------------------------------------------------------- */
 {
     g_return_if_fail(DOC_VALID(doc));
-    g_debug("%s: opening document '%d'", __FUNCTION__, doc->id);
+    //g_debug("%s: opening document '%d'", __FUNCTION__, doc->id);
 
     BracketColorsData *data = bracket_colors_data_new(doc);
     ScintillaObject *sci = doc->editor->sci;
