@@ -20,6 +20,11 @@
 
 
 /* --------------------------------- INCLUDES ------------------------------- */
+
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <string>
 #include <array>
 #include <set>
