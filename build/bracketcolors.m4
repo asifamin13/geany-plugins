@@ -11,10 +11,10 @@ AC_DEFUN([GP_CHECK_BRACKETCOLORS],
     PYTHON_VERSION=3.0
     
     AS_IF(
-        [test "$enable_bracketcolors" = "auto"], [
+        [test x$enable_bracketcolors = xauto], [
             AM_PATH_PYTHON(
                 [${PYTHON_VERSION}],
-                [AX_CXX_COMPILE_STDCXX_17(, optional)]
+                [AX_CXX_COMPILE_STDCXX_17(, optional)],
                 [enable_bracketcolors=no]
             )
             AS_IF(
@@ -26,16 +26,17 @@ AC_DEFUN([GP_CHECK_BRACKETCOLORS],
                         [enable_bracketcolors=no]
                     )
                 ],
-                [enable_bracketcolors=no]                
+                [enable_bracketcolors=no]             
             )
         ],
-        [test "$enable_bracketcolors" = "yes"], [
+        [test x$enable_bracketcolors = xyes], [
             AM_PATH_PYTHON(
                 [${PYTHON_VERSION}],
                 [AX_CXX_COMPILE_STDCXX_17(, mandatory)],
                 [AC_MSG_ERROR([Could not find python3 interpreter])]
             )
-        ]
+        ], 
+        [enable_bracketcolors=no]
     )
 
     GP_COMMIT_PLUGIN_STATUS([Bracketcolors])
