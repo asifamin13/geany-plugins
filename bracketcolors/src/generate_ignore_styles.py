@@ -54,7 +54,7 @@ def make_header_str(ignoreMappingStyles):
 
 def make_style_mapping(macros, filters):
     """ parse macros into style dict """
-    # for keys that dont follow pattern.
+    # for keys that dont follow simple pattern.
     # Found from looking at scintilla/lexers/Lex*.cxx
     # TODO: automate this somehow?
     keyAdjustment = {
@@ -73,7 +73,8 @@ def make_style_mapping(macros, filters):
         'SCLEX_BASH': 'SH',
         'SCLEX_HASKELL': 'HA',
         'SCLEX_SMALLTALK': 'ST',
-        'SCLEX_COBOL': 'C'
+        'SCLEX_COBOL': 'C', 
+        'SCLEX_OCTAVE': 'MATLAB'
     }
 
     fileTypes = [ x for x in macros.keys() if x.startswith("SCLEX") ]
