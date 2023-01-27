@@ -1211,7 +1211,6 @@
 ----------------------------------------------------------------------------- */
 {
     //g_debug("%s: handling document activate", __FUNCTION__);
-
     gpointer pluginData = plugin_get_document_data(geany_plugin, doc, sPluginName);
     if (pluginData != NULL) {
         BracketColorsData *data = reinterpret_cast<BracketColorsData *>(pluginData);
@@ -1219,6 +1218,30 @@
         data->StartTimers();
     }
 }
+
+
+
+// -----------------------------------------------------------------------------
+    static void on_startup_complete(
+        GObject *obj,
+        gpointer user_data
+    )
+/*
+
+----------------------------------------------------------------------------- */
+{
+    //g_debug("%s: handling startup complete", __FUNCTION__);
+    GeanyDocument *currDoc = document_get_current();
+    if (currDoc != NULL) {
+        gpointer pluginData = plugin_get_document_data(geany_plugin, currDoc, sPluginName);
+        if (pluginData != NULL) {
+            BracketColorsData *data = reinterpret_cast<BracketColorsData *>(pluginData);
+            g_debug("%s: starting on doc ID: %d", __FUNCTION__, data->doc->id);
+            data->StartTimers();
+        }
+    }
+}
+
 
 
 
@@ -1257,7 +1280,10 @@
 
     assign_indicator_colors(data);
 
-    data->StartTimers();
+    if (user_data == NULL) {
+        data->StartTimers();
+    }
+
 }
 
 
@@ -1276,11 +1302,22 @@
     geany_plugin = plugin;
     geany_data = plugin->geany_data;
 
+    gboolean inInit = TRUE;
+
     guint i = 0;
     foreach_document(i)
     {
-        on_document_open(NULL, documents[i], NULL);
+        on_document_open(NULL, documents[i], (gpointer) &inInit);
     }
+
+    plugin_signal_connect(
+        plugin,
+        NULL, "document-activate",
+        FALSE,
+        G_CALLBACK(on_document_activate), NULL
+    );
+
+    on_startup_complete(NULL, (gpointer) &inInit);
 
     return TRUE;
 }
@@ -1313,10 +1350,10 @@
 
 ----------------------------------------------------------------------------- */
 {
-    { "document-open",      (GCallback) &on_document_open,      FALSE, NULL },
-    { "document-new",       (GCallback) &on_document_open,      FALSE, NULL },
-    { "document-close",     (GCallback) &on_document_close,     FALSE, NULL },
-    { "document-activate",  (GCallback) &on_document_activate,  FALSE, NULL },
+    { "document-open",          (GCallback) &on_document_open,      FALSE, NULL },
+    { "document-new",           (GCallback) &on_document_open,      FALSE, NULL },
+    { "document-close",         (GCallback) &on_document_close,     FALSE, NULL },
+    { "geany-startup-complete", (GCallback) &on_startup_complete,   FALSE, NULL },
     { NULL, NULL, FALSE, NULL }
 };
 
