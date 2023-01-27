@@ -25,13 +25,16 @@
 # include "config.h"
 #endif
 
+#ifdef HAVE_LOCALE_H
+# include <locale.h>
+#endif
+
 #include <string>
 #include <array>
 #include <set>
 #include <map>
 
 #include <glib.h>
-#include <gdk/gdk.h>
 
 #include <geanyplugin.h>
 #include "sciwrappers.h"
@@ -1368,12 +1371,13 @@
 ----------------------------------------------------------------------------- */
 {
     g_debug("%s: loading module", __FUNCTION__);
+    main_locale_init(LOCALEDIR, GETTEXT_PACKAGE);
 
     /* Set metadata */
-    plugin->info->name          = "Bracket Colors";
-    plugin->info->description   = "Color nested brackets, braces, parenthesis";
+    plugin->info->name          = _("Bracket Colors");
+    plugin->info->description   = _("Color nested brackets, braces, parenthesis");
     plugin->info->version       = "0.1";
-    plugin->info->author        = "Asif Amin";
+    plugin->info->author        = "Asif Amin <asifamin@utexas.edu>";
 
     /* Set functions */
     plugin->funcs->init         = plugin_bracketcolors_init;
@@ -1381,5 +1385,5 @@
     plugin->funcs->callbacks    = plugin_bracketcolors_callbacks;
 
     /* Register! */
-    GEANY_PLUGIN_REGISTER(plugin, 225);
+    GEANY_PLUGIN_REGISTER(plugin, 226);
 }
