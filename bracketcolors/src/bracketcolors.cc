@@ -25,6 +25,7 @@
 # include "config.h"
 #endif
 
+#include <string.h>
 #ifdef HAVE_LOCALE_H
 # include <locale.h>
 #endif
@@ -105,12 +106,12 @@
 
         BracketColorsData() :
             doc(NULL),
-            updateUI(FALSE),
-            computeTimeoutID(0),
-            drawTimeoutID(0),
-            computeInterval(500),
             bracketColors(sLightBackgroundColors),
-            init(FALSE)
+            init(FALSE),
+            computeTimeoutID(0),
+            computeInterval(500),
+            drawTimeoutID(0),
+            updateUI(FALSE)
         {
             for (guint i = 0; i < BracketType::COUNT; i++) {
                 bracketColorsEnable[i] = TRUE;
@@ -327,8 +328,8 @@
 {
     ScintillaObject *sci = data->doc->editor->sci;
 
-    for (gint i = 0; i < data->bracketColors.size(); i++) {
-        gint index = sIndicatorIndex + i;
+    for (guint i = 0; i < data->bracketColors.size(); i++) {
+        guint index = sIndicatorIndex + i;
         std::string spec = data->bracketColors.at(i);
         gint color = utils_parse_color_to_bgr(spec.c_str());
         SSM(sci, SCI_INDICSETSTYLE, index, INDIC_TEXTFORE);
@@ -683,7 +684,7 @@
 
                 // make sure there arent any other indicators at position
                 for (
-                    gint indicatorIndex = sIndicatorIndex;
+                    guint indicatorIndex = sIndicatorIndex;
                     indicatorIndex < sIndicatorIndex + BC_NUM_COLORS;
                     indicatorIndex++
                 )
@@ -722,7 +723,7 @@
 {
     for (gint i = position; i < position + length; i++) {
         for (
-            gint indicatorIndex = sIndicatorIndex;
+            guint indicatorIndex = sIndicatorIndex;
             indicatorIndex < sIndicatorIndex + BC_NUM_COLORS;
             indicatorIndex++
         )
@@ -880,9 +881,6 @@
     }
 
     for (const auto &it : indiciesToRecompute) {
-        const auto &bracket = bracketMap.mBracketMap.at(it);
-        gint endPos = it + BracketMap::GetLength(bracket);
-
         // first bracket was moved backwards
         if (it >= position) {
             //g_debug("%s: Moved brace at %d to %d", __FUNCTION__, it, it - length);
@@ -1370,7 +1368,6 @@
     Load module
 ----------------------------------------------------------------------------- */
 {
-    g_debug("%s: loading module", __FUNCTION__);
     main_locale_init(LOCALEDIR, GETTEXT_PACKAGE);
 
     /* Set metadata */
