@@ -67,7 +67,6 @@
 }
 
 
-
 // -----------------------------------------------------------------------------
     void BracketMap::ComputeOrder()
 /*
@@ -109,35 +108,3 @@
         GetOrder(bracket) = orderStack.size() - 1;
     }
 }
-
-
-
-// -----------------------------------------------------------------------------
-    void BracketMap::Show()
-/*
-
------------------------------------------------------------------------------ */
-{   g_debug("%s: Showing bracket map ...", __FUNCTION__);
-
-    for (const auto it : mBracketMap) {
-
-        const Index &startIndex = it.first;
-        const Bracket &bracket = it.second;
-
-        Length length = std::get<0>(bracket);
-        Order order = std::get<1>(bracket);
-
-        Index end = -1;
-        if (length > 0) {
-            end = startIndex + length;
-        }
-
-        g_debug(
-            "%s: Bracket at %d, Length: %d, End: %d, Order: %d",
-            __FUNCTION__, startIndex, length, end, order
-        );
-    }
-
-    g_debug("%s: ... Finished showing bracket map", __FUNCTION__);
-}
-

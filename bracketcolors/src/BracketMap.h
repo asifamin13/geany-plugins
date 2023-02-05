@@ -40,8 +40,6 @@
     BracketMap();
     ~BracketMap();
 
-    void Show();
-
     void Update(Index index, Length length);
     void ComputeOrder();
 
@@ -61,16 +59,5 @@
         return std::get<1>(bracket);
     }
 };
-
-
-
-
-
-
-
-
-
-
-
 
 #endif
