@@ -7,7 +7,7 @@ About
 -----
 
 This plugin enables bracket coloring features. Brackets are colored based on
-nesting level
+nesting level, often referred as "rainbow brackets".
 
 Features
 --------
