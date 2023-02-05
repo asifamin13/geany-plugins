@@ -161,9 +161,6 @@
             NULL
         );
     }
-    else {
-        //g_debug("%s: computeTimeoutID already set", __FUNCTION__);
-    }
 
     if (drawTimeoutID == 0) {
         drawTimeoutID = g_timeout_add_full(
@@ -173,9 +170,6 @@
             this,
             NULL
         );
-    }
-    else {
-        //g_debug("%s: drawTimeoutID already set", __FUNCTION__);
     }
 }
 
@@ -192,16 +186,10 @@
         g_source_remove(computeTimeoutID);
         computeTimeoutID = 0;
     }
-    else {
-        //g_debug("%s: computeTimeoutID already 0", __FUNCTION__);
-    }
 
     if (drawTimeoutID > 0) {
         g_source_remove(drawTimeoutID);
         drawTimeoutID = 0;
-    }
-    else {
-        //g_debug("%s: drawTimeoutID already 0", __FUNCTION__);
     }
 }
 
@@ -379,11 +367,6 @@
 
 ----------------------------------------------------------------------------- */
 {
-    // g_debug(
-    //     "%s: Purging a BracketColorsData",
-    //     __FUNCTION__
-    // );
-
     BracketColorsData *bcd = reinterpret_cast<BracketColorsData *>(data);
     delete bcd;
 }
@@ -533,11 +516,6 @@
 
         gint length = matchedBrace - position;
 
-        // g_debug(
-        //     "%s: bracket at %d matched at %d",
-        //     __FUNCTION__, position, matchedBrace
-        // );
-
         if (length > 0) {
             // matched from start brace
             bracketMap.Update(position, length);
@@ -551,7 +529,6 @@
     }
     else {
         // invalid mapping
-        // g_debug("%s: bracket at %d invalid", __FUNCTION__, position);
 
         if (is_open_bracket(char_at(sci, position), BracketType::COUNT)) {
             if (updateInvalidMapping) {
@@ -668,11 +645,6 @@
 
                 gint curr = SSM(sci, SCI_INDICATORVALUEAT, correctIndicatorIndex, position);
                 if (not curr) {
-                    // g_debug(
-                    //     "%s: Setting indicator %d at %d",
-                    //     __FUNCTION__,
-                    //     correctIndicatorIndex, position
-                    // );
                     SSM(
                         sci,
                         SCI_SETINDICATORCURRENT,
@@ -729,9 +701,7 @@
         )
         {
             gint hasIndicator = SSM(sci, SCI_INDICATORVALUEAT, indicatorIndex, i);
-            // g_debug("%s: Indicator %d: %d", __FUNCTION__, indicatorIndex, hasIndicator);
             if (hasIndicator) {
-                // g_debug("%s: Clearing bracket at %d", __FUNCTION__, i);
                 SSM(
                     sci,
                     SCI_SETINDICATORCURRENT,
@@ -790,29 +760,20 @@
     for (gint i = position; i < position + length; i++) {
         gchar newChar = char_at(sci, i);
         if (is_bracket_type(newChar, type)) {
-            // g_debug("%s: Handling new bracket character", __FUNCTION__);
             madeChange = TRUE;
             bracketColorsData.recomputeIndicies.insert(i);
         }
     }
 
-    // g_debug(
-    //     "%s: Need to adjust %d brackets, recompute %d brackets",
-    //     __FUNCTION__, indiciesToAdjust.size(), indiciesToRecompute.size()
-    // );
-
     if (not indiciesToAdjust.size() and not indiciesToRecompute.size()) {
-        //g_debug("%s: Nothing to do", __FUNCTION__);
         return madeChange;
     }
 
     for (const auto &it : indiciesToRecompute) {
-        //g_debug("%s: Recomputing bracket at %d", __FUNCTION__, it);
         bracketColorsData.recomputeIndicies.insert(it);
     }
 
     for (const auto &it : indiciesToAdjust) {
-        //g_debug("%s: Moved brace at %d to %d", __FUNCTION__, it, it + length);
         bracketMap.mBracketMap.insert(
             std::make_pair(
                 it + length,
@@ -861,21 +822,14 @@
         }
     }
 
-    // g_debug(
-    //     "%s: Need to remove %d brackets, adjust %d brackets",
-    //     __FUNCTION__, indiciesToRemove.size(), indiciesToRecompute.size()
-    // );
-
     if (
         not indiciesToRemove.size() and
         not indiciesToRecompute.size()
     ) {
-        //g_debug("%s: Nothing to do", __FUNCTION__);
         return FALSE;
     }
 
     for (const auto &it : indiciesToRemove) {
-        //g_debug("%s: Removing brace at %d", __FUNCTION__, it);
         bracketMap.mBracketMap.erase(it);
         bracketColorsData.RemoveFromQueues(it);
     }
@@ -883,7 +837,6 @@
     for (const auto &it : indiciesToRecompute) {
         // first bracket was moved backwards
         if (it >= position) {
-            //g_debug("%s: Moved brace at %d to %d", __FUNCTION__, it, it - length);
             bracketMap.mBracketMap.insert(
                 std::make_pair(
                     it - length,
@@ -895,7 +848,6 @@
         }
         // last bracket was moved
         else {
-            //g_debug("%s: Recomputing bracket at %d", __FUNCTION__, it);
             bracketColorsData.recomputeIndicies.insert(it);
         }
     }
@@ -915,10 +867,6 @@
 ----------------------------------------------------------------------------- */
 {
     if (data->updateUI) {
-        // g_debug(
-        //     "%s: Need to update %d indicies",
-        //     __FUNCTION__, data->redrawIndicies.size()
-        // );
 
         for (
             auto position = data->redrawIndicies.begin();
@@ -969,10 +917,6 @@
         case(SCN_MODIFIED):
         {
             if (nt->modificationType & SC_MOD_INSERTTEXT) {
-                // g_debug(
-                //     "%s: Text added. Position: %d, Length: %d",
-                //     __FUNCTION__, nt->position, nt->length
-                // );
 
                 // if we insert into position that had bracket
                 clear_bc_indicators(sci, nt->position, nt->length);
@@ -996,10 +940,6 @@
             }
 
             if (nt->modificationType & SC_MOD_DELETETEXT) {
-                // g_debug(
-                //     "%s: Text removed. Position: %d, Length: %d",
-                //     __FUNCTION__, nt->position, nt->length
-                // );
 
                 for (gint bracketType = 0; bracketType < BracketType::COUNT; bracketType++) {
                     if (
@@ -1016,10 +956,6 @@
             }
 
             if (nt->modificationType & SC_MOD_CHANGESTYLE) {
-                // g_debug(
-                //     "%s: Style change. Position: %d, Length: %d",
-                //     __FUNCTION__, nt->position, nt->length
-                // );
 
                 if (data->init == TRUE) {
                     for (gint bracketType = 0; bracketType < BracketType::COUNT; bracketType++) {
@@ -1122,11 +1058,6 @@
 
         ScintillaObject *sci = data->doc->editor->sci;
 
-        // g_debug(
-        //     "%s: have to recompute %d indicies",
-        //     __FUNCTION__, data->recomputeIndicies.size()
-        // );
-
         unsigned numIterations = 0;
         for (
             auto position = data->recomputeIndicies.begin();
@@ -1184,19 +1115,14 @@
 ----------------------------------------------------------------------------- */
 {
     g_return_if_fail(DOC_VALID(doc));
-    //g_debug("%s: closing document '%d'", __FUNCTION__, doc->id);
-
     gpointer pluginData = plugin_get_document_data(geany_plugin, doc, sPluginName);
     if (pluginData != NULL) {
         BracketColorsData *data = reinterpret_cast<BracketColorsData *>(pluginData);
-        //g_debug("%s: Closing doc ID: %d", __FUNCTION__, data->doc->id);
         data->StopTimers();
     }
 
     ScintillaObject *sci = doc->editor->sci;
     remove_bc_indicators(sci);
-
-    //g_debug("%s: finished close routine", __FUNCTION__);
 }
 
 
@@ -1211,11 +1137,9 @@
 
 ----------------------------------------------------------------------------- */
 {
-    //g_debug("%s: handling document activate", __FUNCTION__);
     gpointer pluginData = plugin_get_document_data(geany_plugin, doc, sPluginName);
     if (pluginData != NULL) {
         BracketColorsData *data = reinterpret_cast<BracketColorsData *>(pluginData);
-        //g_debug("%s: got page switch to doc ID: %d", __FUNCTION__, data->doc->id);
         data->StartTimers();
     }
 }
@@ -1231,13 +1155,11 @@
 
 ----------------------------------------------------------------------------- */
 {
-    //g_debug("%s: handling startup complete", __FUNCTION__);
     GeanyDocument *currDoc = document_get_current();
     if (currDoc != NULL) {
         gpointer pluginData = plugin_get_document_data(geany_plugin, currDoc, sPluginName);
         if (pluginData != NULL) {
             BracketColorsData *data = reinterpret_cast<BracketColorsData *>(pluginData);
-            g_debug("%s: starting on doc ID: %d", __FUNCTION__, data->doc->id);
             data->StartTimers();
         }
     }
@@ -1257,7 +1179,6 @@
 ----------------------------------------------------------------------------- */
 {
     g_return_if_fail(DOC_VALID(doc));
-    //g_debug("%s: opening document '%d'", __FUNCTION__, doc->id);
 
     BracketColorsData *data = bracket_colors_data_new(doc);
     ScintillaObject *sci = doc->editor->sci;
@@ -1298,8 +1219,6 @@
 
 ----------------------------------------------------------------------------- */
 {
-    g_debug("%s: seting up plugin", __FUNCTION__);
-
     geany_plugin = plugin;
     geany_data = plugin->geany_data;
 
@@ -1334,8 +1253,6 @@
 
 ----------------------------------------------------------------------------- */
 {
-    g_debug("%s: leaving bracket colors", __FUNCTION__);
-
     guint i = 0;
     foreach_document(i)
     {
