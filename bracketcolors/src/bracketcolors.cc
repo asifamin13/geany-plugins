@@ -1,7 +1,7 @@
 /*
  *      bracketcolors.cc
  *
- *      Copyright 2013 Asif Amin <asifamin@utexas.edu>
+ *      Copyright 2023 Asif Amin <asifamin@utexas.edu>
  *
  *      This program is free software; you can redistribute it and/or modify
  *      it under the terms of the GNU General Public License as published by
