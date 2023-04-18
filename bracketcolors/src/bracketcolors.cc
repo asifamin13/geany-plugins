@@ -1267,6 +1267,53 @@
 
 
 
+// -----------------------------------------------------------------------------
+    static GtkWidget* plugin_bracketcolors_configure(
+        GeanyPlugin *plugin,
+        GtkDialog *dialog,
+        gpointer pdata
+    )
+/*
+
+----------------------------------------------------------------------------- */
+{
+    g_debug("%s: Settings up configure dialog", __FUNCTION__);
+
+    GtkWidget *grid = gtk_grid_new();
+    gtk_grid_set_row_spacing(GTK_GRID(grid), 5);
+
+    GtkWidget *frame = gtk_frame_new("Bracket Colors");
+
+    GtkWidget *colorButtonGrid = gtk_grid_new();
+    gtk_grid_set_column_spacing(GTK_GRID(colorButtonGrid), 5);
+
+    gtk_widget_set_margin_start(colorButtonGrid, 5);
+    gtk_widget_set_margin_end(colorButtonGrid, 5);
+    gtk_widget_set_margin_bottom(colorButtonGrid, 5);
+
+    gtk_container_add(GTK_CONTAINER(frame), colorButtonGrid);
+
+    for (int i = 0; i < BC_NUM_COLORS; i++) {
+        gtk_grid_attach(
+            GTK_GRID(colorButtonGrid), gtk_color_button_new(),
+            i, 0, 1, 1
+        );
+    }
+
+    gtk_grid_attach(
+        GTK_GRID(grid), frame,
+        0, 0, 1, 1
+    );
+
+    GtkWidget *checkBox = gtk_check_button_new_with_label("Use Defaults");
+    gtk_grid_attach(
+        GTK_GRID(grid), checkBox,
+        0, 1, 1, 1
+    );
+
+    return grid;
+}
+
 
 
 // -----------------------------------------------------------------------------
@@ -1287,6 +1334,7 @@
     plugin->funcs->init         = plugin_bracketcolors_init;
     plugin->funcs->cleanup      = plugin_bracketcolors_cleanup;
     plugin->funcs->callbacks    = plugin_bracketcolors_callbacks;
+    plugin->funcs->configure    = plugin_bracketcolors_configure;
 
     /* Register! */
     GEANY_PLUGIN_REGISTER(plugin, 226);
