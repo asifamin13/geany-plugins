@@ -1268,35 +1268,71 @@
 
 
 // -----------------------------------------------------------------------------
+    static void checkbox_toggled(
+        GtkWidget *checkbox,
+        gpointer data
+    )
+/*
+
+----------------------------------------------------------------------------- */
+{
+    GtkWidget *colorButtonGrid = GTK_WIDGET(data);
+    gboolean enabled = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbox)) == TRUE ? FALSE : TRUE;
+    gtk_widget_set_sensitive(colorButtonGrid, enabled);
+}
+
+
+
+// -----------------------------------------------------------------------------
+    static void color_button_set(
+        GtkColorButton *colorButton,
+        gpointer data
+    )
+/*
+
+----------------------------------------------------------------------------- */
+{
+    printf("Color changed!\n");
+}
+
+
+
+// -----------------------------------------------------------------------------
     static GtkWidget* plugin_bracketcolors_configure(
         GeanyPlugin *plugin,
         GtkDialog *dialog,
         gpointer pdata
     )
 /*
-
+    make UI elements
 ----------------------------------------------------------------------------- */
 {
-    g_debug("%s: Settings up configure dialog", __FUNCTION__);
-
     GtkWidget *grid = gtk_grid_new();
     gtk_grid_set_row_spacing(GTK_GRID(grid), 5);
 
-    GtkWidget *frame = gtk_frame_new("Bracket Colors");
-
     GtkWidget *colorButtonGrid = gtk_grid_new();
     gtk_grid_set_column_spacing(GTK_GRID(colorButtonGrid), 5);
-
     gtk_widget_set_margin_start(colorButtonGrid, 5);
     gtk_widget_set_margin_end(colorButtonGrid, 5);
     gtk_widget_set_margin_bottom(colorButtonGrid, 5);
 
+    GtkWidget *frame = gtk_frame_new("Bracket Colors");
     gtk_container_add(GTK_CONTAINER(frame), colorButtonGrid);
 
     for (int i = 0; i < BC_NUM_COLORS; i++) {
+
+        GtkWidget *colorButton = gtk_color_button_new();
+
         gtk_grid_attach(
-            GTK_GRID(colorButtonGrid), gtk_color_button_new(),
+            GTK_GRID(colorButtonGrid), colorButton,
             i, 0, 1, 1
+        );
+
+        g_signal_connect(
+            G_OBJECT(colorButton),
+            "color-set",
+            G_CALLBACK(color_button_set),
+            NULL
         );
     }
 
@@ -1309,6 +1345,13 @@
     gtk_grid_attach(
         GTK_GRID(grid), checkBox,
         0, 1, 1, 1
+    );
+
+    g_signal_connect(
+        G_OBJECT(checkBox),
+        "toggled",
+        G_CALLBACK(checkbox_toggled),
+        colorButtonGrid
     );
 
     return grid;
