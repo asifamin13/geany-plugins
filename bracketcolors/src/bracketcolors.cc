@@ -214,7 +214,7 @@
         BracketColorsPluginConfiguration() : mUseDefaults(TRUE), mColors(sLightBackgroundColors) {
             mPluginSettings[0] = std::make_shared<BooleanSetting>("general", "defaults", &mUseDefaults);
             for (int i = 1; i <= BC_NUM_COLORS; i++) {
-                std::string key = "color_" + std::to_string(i);
+                std::string key = "order_" + std::to_string(i-1);
                 mPluginSettings[i] = std::make_shared<ColorSetting>("colors", key, &mColors[i-1]);
             }
         }
