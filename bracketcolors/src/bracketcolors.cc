@@ -90,9 +90,7 @@
          */
 
         GeanyDocument *doc;
-
         guint32 backgroundColor;
-        BracketColorArray bracketColors;
 
         gboolean init;
 
@@ -107,7 +105,6 @@
 
         BracketColorsData() :
             doc(NULL),
-            bracketColors(sLightBackgroundColors),
             init(FALSE),
             computeTimeoutID(0),
             computeInterval(500),
@@ -399,9 +396,9 @@
 {
     ScintillaObject *sci = data->doc->editor->sci;
 
-    for (guint i = 0; i < data->bracketColors.size(); i++) {
+    for (guint i = 0; i < gPluginConfiguration.mColors.size(); i++) {
         guint index = sIndicatorIndex + i;
-        std::string spec = data->bracketColors.at(i);
+        std::string spec = gPluginConfiguration.mColors.at(i);
         gint color = utils_parse_color_to_bgr(spec.c_str());
         SSM(sci, SCI_INDICSETSTYLE, index, INDIC_TEXTFORE);
         SSM(sci, SCI_INDICSETFORE, index, color);
@@ -1096,7 +1093,7 @@
 
         if (currDark != wasDark) {
             g_debug("%s: Need to change colors scheme!", __FUNCTION__);
-            data->bracketColors = currDark ? sDarkBackgroundColors : sLightBackgroundColors;
+            gPluginConfiguration.mColors = currDark ? sDarkBackgroundColors : sLightBackgroundColors;
             assign_indicator_colors(data);
         }
 
@@ -1409,7 +1406,7 @@
 
     data->backgroundColor = SSM(sci, SCI_STYLEGETBACK, STYLE_DEFAULT, BC_NO_ARG);
     if (utils_is_dark(data->backgroundColor)) {
-        data->bracketColors = sDarkBackgroundColors;
+        gPluginConfiguration.mColors = sDarkBackgroundColors;
     }
 
     assign_indicator_colors(data);
