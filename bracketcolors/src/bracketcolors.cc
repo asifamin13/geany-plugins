@@ -177,17 +177,50 @@
         }
     };
 
+    struct ColorSetting : public BracketColorsPluginSetting {
+
+        ColorSetting(
+            std::string group,
+            std::string key,
+            gpointer value
+        ) : BracketColorsPluginSetting(group, key, value)
+        {
+            // nothing to do
+        }
+
+        void read(GKeyFile *kf) {
+            std::string *strPtr = reinterpret_cast<std::string *>(mValue);
+            gchar *str = utils_get_setting_string(
+                kf, mGroup.c_str(), mKey.c_str(), strPtr->c_str()
+            );
+            *strPtr = std::string(str);
+            g_free(str);
+        }
+
+        void write(GKeyFile *kf) {
+            std::string *strPtr = reinterpret_cast<std::string *>(mValue);
+            g_key_file_set_string(kf, mGroup.c_str(), mKey.c_str(), strPtr->c_str());
+        }
+    };
+
 /* ---------------------------------- GLOBALS ------------------------------- */
 
-    // Whether to use the auto defaults
-    gboolean gUseDefaults = TRUE;
+    struct BracketColorsPluginConfiguration {
 
-    // Custom user defined colors
-    BracketColorArray gCustomColors;
+        gboolean mUseDefaults;
+        BracketColorArray mColors;
 
-    std::array<std::shared_ptr<BracketColorsPluginSetting>, 1> gPluginSettings = {
-        std::make_shared<BooleanSetting>("general", "defaults", &gUseDefaults)
+        std::array<std::shared_ptr<BracketColorsPluginSetting>, 1 + BC_NUM_COLORS> mPluginSettings;
+        BracketColorsPluginConfiguration() : mUseDefaults(TRUE), mColors(sLightBackgroundColors) {
+            mPluginSettings[0] = std::make_shared<BooleanSetting>("general", "defaults", &mUseDefaults);
+            for (int i = 1; i <= BC_NUM_COLORS; i++) {
+                std::string key = "color_" + std::to_string(i);
+                mPluginSettings[i] = std::make_shared<ColorSetting>("colors", key, &mColors[i-1]);
+            }
+        }
     };
+
+    BracketColorsPluginConfiguration gPluginConfiguration;
 
 /* ---------------------------------- EXTERNS ------------------------------- */
 
@@ -1309,7 +1342,7 @@
     g_debug("%s: Trying to load configuration file: %s", __FUNCTION__, filename.c_str());
 
     if (read_keyfile(kf, filename, G_KEY_FILE_NONE)) {
-        for (auto &it : gPluginSettings) {
+        for (auto &it : gPluginConfiguration.mPluginSettings) {
             it->read(kf);
         }
     }
@@ -1333,7 +1366,7 @@
     g_debug("%s: Trying to save configuration file: %s", __FUNCTION__, filename.c_str());
     read_keyfile(kf, filename, G_KEY_FILE_KEEP_COMMENTS);
 
-    for (auto &it : gPluginSettings) {
+    for (auto &it : gPluginConfiguration.mPluginSettings) {
         it->write(kf);
     }
     write_keyfile(kf, filename);
@@ -1476,7 +1509,7 @@
         not isActive
     );
 
-    gUseDefaults = isActive;
+    gPluginConfiguration.mUseDefaults = isActive;
 }
 
 
@@ -1553,7 +1586,7 @@
         colorButtonGrid
     );
 
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkBox), gUseDefaults);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkBox), gPluginConfiguration.mUseDefaults);
 
     return grid;
 }
