@@ -1523,8 +1523,16 @@
 
 ----------------------------------------------------------------------------- */
 {
-    //gchar *fullConfigFile = get_config_filename();
-    //printf("Color changed! Writing to %s\n", fullConfigFile);
+    std::string *strPtr = reinterpret_cast<std::string *>(data);
+
+    GdkColor color;
+    gtk_color_button_get_color(colorButton, &color);
+
+    gchar *colorAsStr = gdk_color_to_string(&color);
+    *strPtr = std::string(colorAsStr);
+
+    g_debug("%s: Got new color: %s", __FUNCTION__, strPtr->c_str());
+    g_free(colorAsStr);
 }
 
 
@@ -1553,7 +1561,10 @@
 
     for (int i = 0; i < BC_NUM_COLORS; i++) {
 
-        GtkWidget *colorButton = gtk_color_button_new();
+        GdkColor color;
+        utils_parse_color(gPluginConfiguration.mColors[i].c_str(), &color);
+
+        GtkWidget *colorButton = gtk_color_button_new_with_color(&color);
 
         gtk_grid_attach(
             GTK_GRID(colorButtonGrid), colorButton,
@@ -1564,7 +1575,7 @@
             G_OBJECT(colorButton),
             "color-set",
             G_CALLBACK(color_button_set),
-            NULL
+            reinterpret_cast<gpointer>(&gPluginConfiguration.mColors[i])
         );
     }
 
@@ -1586,7 +1597,10 @@
         colorButtonGrid
     );
 
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkBox), gPluginConfiguration.mUseDefaults);
+    gtk_toggle_button_set_active(
+        GTK_TOGGLE_BUTTON(checkBox),
+        gPluginConfiguration.mUseDefaults
+    );
 
     return grid;
 }
