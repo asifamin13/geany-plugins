@@ -165,12 +165,16 @@
 
         void read(GKeyFile *kf) {
             gboolean *aBool = static_cast<gboolean *>(mValue);
-            *aBool = utils_get_setting_boolean(kf, mGroup.c_str(), mKey.c_str(), *aBool);
+            *aBool = utils_get_setting_boolean(
+                kf, mGroup.c_str(), mKey.c_str(), *aBool
+            );
         }
 
         void write(GKeyFile *kf) {
             const gboolean *aBool = static_cast<gboolean *>(mValue);
-            g_key_file_set_boolean(kf, mGroup.c_str(), mKey.c_str(), *aBool);
+            g_key_file_set_boolean(
+                kf, mGroup.c_str(), mKey.c_str(), *aBool
+            );
         }
     };
 
@@ -196,7 +200,9 @@
 
         void write(GKeyFile *kf) {
             std::string *strPtr = reinterpret_cast<std::string *>(mValue);
-            g_key_file_set_string(kf, mGroup.c_str(), mKey.c_str(), strPtr->c_str());
+            g_key_file_set_string(
+                kf, mGroup.c_str(), mKey.c_str(), strPtr->c_str()
+            );
         }
     };
 
@@ -206,17 +212,23 @@
 
         gboolean mUseDefaults;
         BracketColorArray mColors;
+        BracketColorArray mCustomColors;
 
         /*
          * Setting for enable defaults + each color order
          */
+
         std::array<std::shared_ptr<BracketColorsPluginSetting>, 1 + BC_NUM_COLORS> mPluginSettings;
 
-        BracketColorsPluginConfiguration() : mUseDefaults(TRUE), mColors(sLightBackgroundColors) {
+        BracketColorsPluginConfiguration() :
+            mUseDefaults(TRUE),
+            mColors(sLightBackgroundColors),
+            mCustomColors(mColors)
+        {
             mPluginSettings[0] = std::make_shared<BooleanSetting>("general", "defaults", &mUseDefaults);
             for (guint i = 1; i <= BC_NUM_COLORS; i++) {
                 std::string key = "order_" + std::to_string(i-1);
-                mPluginSettings[i] = std::make_shared<ColorSetting>("colors", key, &mColors[i-1]);
+                mPluginSettings[i] = std::make_shared<ColorSetting>("colors", key, &mCustomColors[i-1]);
             }
         }
     };
@@ -1091,7 +1103,7 @@
         gboolean currDark = utils_is_dark(currBGColor);
         gboolean wasDark = utils_is_dark(data->backgroundColor);
 
-        if (currDark != wasDark) {
+        if (currDark != wasDark and gPluginConfiguration.mUseDefaults) {
             g_debug("%s: Need to change colors scheme!", __FUNCTION__);
             gPluginConfiguration.mColors = currDark ? sDarkBackgroundColors : sLightBackgroundColors;
             assign_indicator_colors(data);
@@ -1405,8 +1417,17 @@
      */
 
     data->backgroundColor = SSM(sci, SCI_STYLEGETBACK, STYLE_DEFAULT, BC_NO_ARG);
-    if (utils_is_dark(data->backgroundColor)) {
-        gPluginConfiguration.mColors = sDarkBackgroundColors;
+
+    if (gPluginConfiguration.mUseDefaults) {
+        if (utils_is_dark(data->backgroundColor)) {
+            gPluginConfiguration.mColors = sDarkBackgroundColors;
+        }
+        else {
+            gPluginConfiguration.mColors = sLightBackgroundColors;
+        }
+    }
+    else {
+        gPluginConfiguration.mColors = gPluginConfiguration.mCustomColors;
     }
 
     assign_indicator_colors(data);
@@ -1478,17 +1499,39 @@
 
 
 // -----------------------------------------------------------------------------
-    static PluginCallback plugin_bracketcolors_callbacks[] =
+    static void update_colors(void)
 /*
 
 ----------------------------------------------------------------------------- */
 {
-    { "document-open",          (GCallback) &on_document_open,      FALSE, NULL },
-    { "document-new",           (GCallback) &on_document_open,      FALSE, NULL },
-    { "document-close",         (GCallback) &on_document_close,     FALSE, NULL },
-    { "geany-startup-complete", (GCallback) &on_startup_complete,   FALSE, NULL },
-    { NULL, NULL, FALSE, NULL }
-};
+    if (not gPluginConfiguration.mUseDefaults) {
+        gPluginConfiguration.mColors = gPluginConfiguration.mCustomColors;
+    }
+
+    if (has_document()) {
+
+        GtkNotebook *notebook = GTK_NOTEBOOK(geany_data->main_widgets->notebook);
+        gint currPage = gtk_notebook_get_current_page(notebook);
+        GeanyDocument *currDoc = document_get_from_page(currPage);
+
+        if (currDoc != NULL) {
+
+            gpointer docData = plugin_get_document_data(
+                geany_plugin, currDoc, sPluginName
+            );
+
+            if (docData != NULL) {
+                BracketColorsData *bcd = reinterpret_cast<BracketColorsData *>(docData);
+
+                if (gPluginConfiguration.mUseDefaults) {
+                    gboolean isDark = utils_is_dark(bcd->backgroundColor);
+                    gPluginConfiguration.mColors = isDark ? sDarkBackgroundColors : sLightBackgroundColors;
+                }
+                assign_indicator_colors(bcd);
+            }
+        }
+    }
+}
 
 
 
@@ -1511,6 +1554,8 @@
     );
 
     gPluginConfiguration.mUseDefaults = isActive;
+
+    update_colors();
 }
 
 
@@ -1534,6 +1579,8 @@
 
     g_debug("%s: Got new color: %s", __FUNCTION__, strPtr->c_str());
     g_free(colorAsStr);
+
+    update_colors();
 }
 
 
@@ -1563,7 +1610,7 @@
     for (guint i = 0; i < BC_NUM_COLORS; i++) {
 
         GdkColor color;
-        utils_parse_color(gPluginConfiguration.mColors[i].c_str(), &color);
+        utils_parse_color(gPluginConfiguration.mCustomColors[i].c_str(), &color);
 
         GtkWidget *colorButton = gtk_color_button_new_with_color(&color);
 
@@ -1576,7 +1623,7 @@
             G_OBJECT(colorButton),
             "color-set",
             G_CALLBACK(color_button_set),
-            reinterpret_cast<gpointer>(&gPluginConfiguration.mColors[i])
+            reinterpret_cast<gpointer>(&gPluginConfiguration.mCustomColors[i])
         );
     }
 
@@ -1605,6 +1652,21 @@
 
     return grid;
 }
+
+
+
+// -----------------------------------------------------------------------------
+    static PluginCallback plugin_bracketcolors_callbacks[] =
+/*
+
+----------------------------------------------------------------------------- */
+{
+    { "document-open",          (GCallback) &on_document_open,      FALSE, NULL },
+    { "document-new",           (GCallback) &on_document_open,      FALSE, NULL },
+    { "document-close",         (GCallback) &on_document_close,     FALSE, NULL },
+    { "geany-startup-complete", (GCallback) &on_startup_complete,   FALSE, NULL },
+    { NULL, NULL, FALSE, NULL }
+};
 
 
 
