@@ -34,6 +34,7 @@
 #include <array>
 #include <set>
 #include <map>
+#include <memory>
 
 #include <glib.h>
 
@@ -130,6 +131,62 @@
         void RemoveFromQueues(BracketMap::Index index);
         void StartTimers();
         void StopTimers();
+    };
+
+    struct BracketColorsPluginSetting {
+
+        /*
+         * Settings configuration base class
+         */
+
+        std::string mGroup, mKey;
+        gpointer mValue;
+
+        BracketColorsPluginSetting(
+            std::string group,
+            std::string key,
+            gpointer value
+        ) : mGroup(group), mKey(key), mValue(value)
+        {
+            // nothing to do
+        }
+
+        virtual void read(GKeyFile *kf)=0;
+        virtual void write(GKeyFile *kf)=0;
+    };
+
+    struct BooleanSetting : public BracketColorsPluginSetting {
+
+        BooleanSetting(
+            std::string group,
+            std::string key,
+            gpointer value
+        ) : BracketColorsPluginSetting(group, key, value)
+        {
+            // nothing to do
+        }
+
+        void read(GKeyFile *kf) {
+            gboolean *aBool = static_cast<gboolean *>(mValue);
+            *aBool = utils_get_setting_boolean(kf, mGroup.c_str(), mKey.c_str(), *aBool);
+        }
+
+        void write(GKeyFile *kf) {
+            const gboolean *aBool = static_cast<gboolean *>(mValue);
+            g_key_file_set_boolean(kf, mGroup.c_str(), mKey.c_str(), *aBool);
+        }
+    };
+
+/* ---------------------------------- GLOBALS ------------------------------- */
+
+    // Whether to use the auto defaults
+    gboolean gUseDefaults = TRUE;
+
+    // Custom user defined colors
+    BracketColorArray gCustomColors;
+
+    std::array<std::shared_ptr<BracketColorsPluginSetting>, 1> gPluginSettings = {
+        std::make_shared<BooleanSetting>("general", "defaults", &gUseDefaults)
     };
 
 /* ---------------------------------- EXTERNS ------------------------------- */
@@ -1268,17 +1325,37 @@
 
 
 // -----------------------------------------------------------------------------
+    static gchar* get_config_filename(void)
+/*
+
+----------------------------------------------------------------------------- */
+{
+    std::string configFile(sPluginName);
+    configFile.append(".conf");
+
+    return g_build_filename(
+        geany_data->app->configdir, "plugins",
+        sPluginName, configFile.c_str(),
+        NULL
+    );
+}
+
+
+
+// -----------------------------------------------------------------------------
     static void checkbox_toggled(
         GtkWidget *checkbox,
         gpointer data
     )
 /*
-
+    if checkbox toggled, block the button grid
 ----------------------------------------------------------------------------- */
 {
     GtkWidget *colorButtonGrid = GTK_WIDGET(data);
-    gboolean enabled = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbox)) == TRUE ? FALSE : TRUE;
-    gtk_widget_set_sensitive(colorButtonGrid, enabled);
+    gtk_widget_set_sensitive(
+        colorButtonGrid,
+        not gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbox))
+    );
 }
 
 
@@ -1292,7 +1369,8 @@
 
 ----------------------------------------------------------------------------- */
 {
-    printf("Color changed!\n");
+    gchar *fullConfigFile = get_config_filename();
+    printf("Color changed! Writing to %s\n", fullConfigFile);
 }
 
 
