@@ -210,10 +210,14 @@
         gboolean mUseDefaults;
         BracketColorArray mColors;
 
+        /*
+         * Setting for enable defaults + each color order
+         */
         std::array<std::shared_ptr<BracketColorsPluginSetting>, 1 + BC_NUM_COLORS> mPluginSettings;
+
         BracketColorsPluginConfiguration() : mUseDefaults(TRUE), mColors(sLightBackgroundColors) {
             mPluginSettings[0] = std::make_shared<BooleanSetting>("general", "defaults", &mUseDefaults);
-            for (int i = 1; i <= BC_NUM_COLORS; i++) {
+            for (guint i = 1; i <= BC_NUM_COLORS; i++) {
                 std::string key = "order_" + std::to_string(i-1);
                 mPluginSettings[i] = std::make_shared<ColorSetting>("colors", key, &mColors[i-1]);
             }
@@ -1559,7 +1563,7 @@
     GtkWidget *frame = gtk_frame_new("Bracket Colors");
     gtk_container_add(GTK_CONTAINER(frame), colorButtonGrid);
 
-    for (int i = 0; i < BC_NUM_COLORS; i++) {
+    for (guint i = 0; i < BC_NUM_COLORS; i++) {
 
         GdkColor color;
         utils_parse_color(gPluginConfiguration.mColors[i].c_str(), &color);
