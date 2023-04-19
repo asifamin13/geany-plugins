@@ -1213,6 +1213,134 @@
 }
 
 
+// -----------------------------------------------------------------------------
+    static std::string get_config_filename(void)
+/*
+
+----------------------------------------------------------------------------- */
+{
+    std::string configFile(sPluginName);
+    configFile.append(".conf");
+
+    return std::string(
+        g_build_filename(
+            geany_data->app->configdir, "plugins",
+            sPluginName, configFile.c_str(),
+            NULL
+        )
+    );
+}
+
+
+
+// -----------------------------------------------------------------------------
+    static gboolean read_keyfile(
+        GKeyFile *kf,
+        std::string filename,
+        GKeyFileFlags flags
+    )
+/*
+    loads filename in kf and return %FALSE if failed, emitting a warning
+    unless the file was simply missing
+----------------------------------------------------------------------------- */
+{
+    GError *error = NULL;
+    if (!g_key_file_load_from_file(kf, filename.c_str(), flags, &error)) {
+        if (error->domain != G_FILE_ERROR || error->code != G_FILE_ERROR_NOENT) {
+            g_debug("%s: Failed to load configuration file: %s", __FUNCTION__, error->message);
+        }
+        g_error_free (error);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+
+
+// -----------------------------------------------------------------------------
+    static gboolean write_keyfile(
+        GKeyFile *kf,
+        std::string filename
+    )
+/*
+    loads filename in kf and return %FALSE if failed, emitting a warning
+    unless the file was simply missing
+----------------------------------------------------------------------------- */
+{
+    gchar *dirname = g_path_get_dirname(filename.c_str());
+
+    gsize length;
+    gchar *data = g_key_file_to_data(kf, &length, NULL);
+
+    GError *error = NULL;
+    gint err;
+    gboolean success = FALSE;
+
+    if ((err = utils_mkdir(dirname, TRUE)) != 0) {
+        g_warning(
+            "Failed to create configuration directory \"%s\": %s",
+            dirname, g_strerror(err)
+        );
+    }
+    else if (!g_file_set_contents(filename.c_str(), data, (gssize)length, &error)) {
+        g_warning("Failed to save configuration file: %s", error->message);
+        g_error_free(error);
+    } else {
+        success = TRUE;
+    }
+
+    g_free(data);
+    g_free(dirname);
+    return success;
+}
+
+
+
+// -----------------------------------------------------------------------------
+    static void load_config(void)
+/*
+
+----------------------------------------------------------------------------- */
+{
+    std::string filename = get_config_filename();
+    GKeyFile *kf = g_key_file_new();
+
+    g_debug("%s: Trying to load configuration file: %s", __FUNCTION__, filename.c_str());
+
+    if (read_keyfile(kf, filename, G_KEY_FILE_NONE)) {
+        for (auto &it : gPluginSettings) {
+            it->read(kf);
+        }
+    }
+    else {
+        g_debug("%s: No configuration file yet", __FUNCTION__);
+    }
+
+    g_key_file_free(kf);
+}
+
+
+// -----------------------------------------------------------------------------
+    static void save_config(void)
+/*
+
+----------------------------------------------------------------------------- */
+{
+    std::string filename = get_config_filename();
+    GKeyFile *kf = g_key_file_new();
+
+    g_debug("%s: Trying to save configuration file: %s", __FUNCTION__, filename.c_str());
+    read_keyfile(kf, filename, G_KEY_FILE_KEEP_COMMENTS);
+
+    for (auto &it : gPluginSettings) {
+        it->write(kf);
+    }
+    write_keyfile(kf, filename);
+
+    g_key_file_free(kf);
+}
+
 
 
 // -----------------------------------------------------------------------------
@@ -1266,8 +1394,12 @@
 
 ----------------------------------------------------------------------------- */
 {
+    g_log_set_writer_func(g_log_writer_default, NULL, NULL);
+
     geany_plugin = plugin;
     geany_data = plugin->geany_data;
+
+    load_config();
 
     gboolean inInit = TRUE;
 
@@ -1305,6 +1437,8 @@
     {
         on_document_close(NULL, documents[i], NULL);
     }
+
+    save_config();
 }
 
 
@@ -1325,24 +1459,6 @@
 
 
 // -----------------------------------------------------------------------------
-    static gchar* get_config_filename(void)
-/*
-
------------------------------------------------------------------------------ */
-{
-    std::string configFile(sPluginName);
-    configFile.append(".conf");
-
-    return g_build_filename(
-        geany_data->app->configdir, "plugins",
-        sPluginName, configFile.c_str(),
-        NULL
-    );
-}
-
-
-
-// -----------------------------------------------------------------------------
     static void checkbox_toggled(
         GtkWidget *checkbox,
         gpointer data
@@ -1352,10 +1468,15 @@
 ----------------------------------------------------------------------------- */
 {
     GtkWidget *colorButtonGrid = GTK_WIDGET(data);
+
+    gboolean isActive = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbox));
+
     gtk_widget_set_sensitive(
         colorButtonGrid,
-        not gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbox))
+        not isActive
     );
+
+    gUseDefaults = isActive;
 }
 
 
@@ -1369,8 +1490,8 @@
 
 ----------------------------------------------------------------------------- */
 {
-    gchar *fullConfigFile = get_config_filename();
-    printf("Color changed! Writing to %s\n", fullConfigFile);
+    //gchar *fullConfigFile = get_config_filename();
+    //printf("Color changed! Writing to %s\n", fullConfigFile);
 }
 
 
@@ -1431,6 +1552,8 @@
         G_CALLBACK(checkbox_toggled),
         colorButtonGrid
     );
+
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkBox), gUseDefaults);
 
     return grid;
 }
