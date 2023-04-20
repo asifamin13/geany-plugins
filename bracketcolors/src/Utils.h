@@ -41,11 +41,11 @@
      * These were copied from VS Code
      */
 
-    static const BracketColorArray sDarkBackgroundColors = {
+    const BracketColorArray sDarkBackgroundColors = {
         "#FF00FF", "#FFFF00", "#00FFFF"
     };
 
-    static const BracketColorArray sLightBackgroundColors = {
+    const BracketColorArray sLightBackgroundColors = {
         "#008000", "#000080", "#800000"
     };
 

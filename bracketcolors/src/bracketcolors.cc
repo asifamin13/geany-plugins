@@ -662,7 +662,7 @@
         gchar newChar = sci_get_char_at(sci, i);
         if (is_bracket_type(newChar, type)) {
             madeChange = TRUE;
-            bracketColorsData.recomputeIndicies.insert(i);
+            indiciesToRecompute.insert(i);
         }
     }
 
@@ -675,15 +675,31 @@
     );
 
     for (const auto &it : indiciesToAdjust) {
+
+        /*
+         * Move bracket, remove old position
+         */
+
         bracketMap.mBracketMap.insert(
             std::make_pair(
                 it + length,
                 bracketMap.mBracketMap.at(it)
             )
         );
-
         bracketMap.mBracketMap.erase(it);
-        bracketColorsData.RemoveFromQueues(it);
+
+        /*
+         * Check if new bracket was placed into position of old adjusted bracket
+         * that we just deleted. If so, don't remove it from the work queue
+         */
+
+        if (
+            bracketColorsData.recomputeIndicies.find(it) == \
+                bracketColorsData.recomputeIndicies.end()
+        ) {
+            bracketColorsData.RemoveFromQueues(it);
+        }
+
     }
 
     return TRUE;
@@ -866,7 +882,6 @@
                         for (gint i = nt->position; i < nt->position + nt->length; i++) {
                             gchar currChar = sci_get_char_at(sci, i);
                             if (is_bracket_type(currChar, static_cast<BracketType>(bracketType))) {
-                                //g_debug("%s: Handling style change for bracket at %d", __FUNCTION__, i);
                                 data->recomputeIndicies.insert(i);
                             }
                         }
@@ -907,13 +922,9 @@
     ScintillaObject *sci = data->doc->editor->sci;
     guint32 currBGColor = SSM(sci, SCI_STYLEGETBACK, STYLE_DEFAULT, BC_NO_ARG);
     if (currBGColor != data->backgroundColor) {
-        g_debug("%s: background color changed: %#04x", __FUNCTION__, currBGColor);
-
         gboolean currDark = utils_is_dark(currBGColor);
         gboolean wasDark = utils_is_dark(data->backgroundColor);
-
         if (currDark != wasDark and gPluginConfiguration.mUseDefaults) {
-            g_debug("%s: Need to change colors scheme!", __FUNCTION__);
             gPluginConfiguration.mColors = currDark ? sDarkBackgroundColors : sLightBackgroundColors;
             assign_indicator_colors(data);
         }
