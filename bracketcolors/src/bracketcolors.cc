@@ -1042,6 +1042,7 @@
     gpointer pluginData = plugin_get_document_data(geany_plugin, doc, sPluginName);
     if (pluginData != NULL) {
         BracketColorsData *data = reinterpret_cast<BracketColorsData *>(pluginData);
+        assign_indicator_colors(data);
         data->StartTimers();
     }
 }

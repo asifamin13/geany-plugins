@@ -24,6 +24,7 @@
 #include <geanyplugin.h>
 #include "Configuration.h"
 
+
 /* ------------------------------ IMPLEMENTATION ---------------------------- */
 
 
@@ -145,19 +146,14 @@
 
 ----------------------------------------------------------------------------- */
 {
-    printf("reading from %s\n", filename.c_str());
-
     GError *error = NULL;
     if (!g_key_file_load_from_file(kf, filename.c_str(), flags, &error)) {
-        printf("HERE!\n");
         if (error->domain != G_FILE_ERROR || error->code != G_FILE_ERROR_NOENT) {
             g_debug("%s: Failed to load configuration file: %s", __FUNCTION__, error->message);
         }
         g_error_free(error);
         return FALSE;
     }
-
-    printf("Read config!\n");
 
     return TRUE;
 }
