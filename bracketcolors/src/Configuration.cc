@@ -1,5 +1,5 @@
 /*
- *      BracketMap.cc
+ *      Configuration.cc
  *
  *      Copyright 2023 Asif Amin <asifamin@utexas.edu>
  *

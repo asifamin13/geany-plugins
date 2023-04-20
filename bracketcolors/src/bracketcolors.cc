@@ -1267,7 +1267,7 @@
         gpointer data
     )
 /*
-
+    callback when user changes color
 ----------------------------------------------------------------------------- */
 {
     std::string *strPtr = reinterpret_cast<std::string *>(data);
@@ -1292,7 +1292,7 @@
         gpointer pdata
     )
 /*
-    make UI elements
+    make UI elements to configure plugin
 ----------------------------------------------------------------------------- */
 {
     GtkWidget *grid = gtk_grid_new();

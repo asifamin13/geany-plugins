@@ -1,5 +1,5 @@
 /*
- *      BracketMap.h
+ *      Configuration.h
  *
  *      Copyright 2023 Asif Amin <asifamin@utexas.edu>
  *
