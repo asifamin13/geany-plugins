@@ -43,7 +43,9 @@
 
 #include "BracketMap.h"
 
-#define BC_NUM_COLORS 3
+#include "Utils.h"
+#include "Configuration.h"
+
 #define BC_NO_ARG 0
 #define BC_STOP_ACTION TRUE
 #define BC_CONTINUE_ACTION FALSE
@@ -52,21 +54,6 @@
 
 
 /* --------------------------------- CONSTANTS ------------------------------ */
-
-    typedef std::array<std::string, BC_NUM_COLORS> BracketColorArray;
-
-    /*
-     * These were copied from VS Code
-     * TODO: Make this user configurable, get from theme?
-     */
-
-    static const BracketColorArray sDarkBackgroundColors = {
-        "#FF00FF", "#FFFF00", "#00FFFF"
-    };
-
-    static const BracketColorArray sLightBackgroundColors = {
-        "#008000", "#000080", "#800000"
-    };
 
     static const gchar *sPluginName = "bracketcolors";
 
@@ -130,108 +117,7 @@
         void StopTimers();
     };
 
-    struct BracketColorsPluginSetting {
-
-        /*
-         * Settings configuration base class
-         */
-
-        std::string mGroup, mKey;
-        gpointer mValue;
-
-        BracketColorsPluginSetting(
-            std::string group,
-            std::string key,
-            gpointer value
-        ) : mGroup(group), mKey(key), mValue(value)
-        {
-            // nothing to do
-        }
-
-        virtual void read(GKeyFile *kf)=0;
-        virtual void write(GKeyFile *kf)=0;
-    };
-
-    struct BooleanSetting : public BracketColorsPluginSetting {
-
-        BooleanSetting(
-            std::string group,
-            std::string key,
-            gpointer value
-        ) : BracketColorsPluginSetting(group, key, value)
-        {
-            // nothing to do
-        }
-
-        void read(GKeyFile *kf) {
-            gboolean *aBool = static_cast<gboolean *>(mValue);
-            *aBool = utils_get_setting_boolean(
-                kf, mGroup.c_str(), mKey.c_str(), *aBool
-            );
-        }
-
-        void write(GKeyFile *kf) {
-            const gboolean *aBool = static_cast<gboolean *>(mValue);
-            g_key_file_set_boolean(
-                kf, mGroup.c_str(), mKey.c_str(), *aBool
-            );
-        }
-    };
-
-    struct ColorSetting : public BracketColorsPluginSetting {
-
-        ColorSetting(
-            std::string group,
-            std::string key,
-            gpointer value
-        ) : BracketColorsPluginSetting(group, key, value)
-        {
-            // nothing to do
-        }
-
-        void read(GKeyFile *kf) {
-            std::string *strPtr = reinterpret_cast<std::string *>(mValue);
-            gchar *str = utils_get_setting_string(
-                kf, mGroup.c_str(), mKey.c_str(), strPtr->c_str()
-            );
-            *strPtr = std::string(str);
-            g_free(str);
-        }
-
-        void write(GKeyFile *kf) {
-            std::string *strPtr = reinterpret_cast<std::string *>(mValue);
-            g_key_file_set_string(
-                kf, mGroup.c_str(), mKey.c_str(), strPtr->c_str()
-            );
-        }
-    };
-
 /* ---------------------------------- GLOBALS ------------------------------- */
-
-    struct BracketColorsPluginConfiguration {
-
-        gboolean mUseDefaults;
-        BracketColorArray mColors;
-        BracketColorArray mCustomColors;
-
-        /*
-         * Setting for enable defaults + each color order
-         */
-
-        std::array<std::shared_ptr<BracketColorsPluginSetting>, 1 + BC_NUM_COLORS> mPluginSettings;
-
-        BracketColorsPluginConfiguration() :
-            mUseDefaults(TRUE),
-            mColors(sLightBackgroundColors),
-            mCustomColors(mColors)
-        {
-            mPluginSettings[0] = std::make_shared<BooleanSetting>("general", "defaults", &mUseDefaults);
-            for (guint i = 1; i <= BC_NUM_COLORS; i++) {
-                std::string key = "order_" + std::to_string(i-1);
-                mPluginSettings[i] = std::make_shared<ColorSetting>("colors", key, &mCustomColors[i-1]);
-            }
-        }
-    };
 
     BracketColorsPluginConfiguration gPluginConfiguration;
 
@@ -316,83 +202,6 @@
         if (it != redrawIndicies.end()) {
             redrawIndicies.erase(it);
         }
-    }
-}
-
-
-// -----------------------------------------------------------------------------
-    static gboolean utils_is_dark(guint32 color)
-
-/*
-
------------------------------------------------------------------------------ */
-{
-    guint8 b = color >> 16;
-    guint8 g = color >> 8;
-    guint8 r = color;
-
-    // https://stackoverflow.com/questions/596216/formula-to-determine-perceived-brightness-of-rgb-color
-    guint8 y  = ((r << 1) + r + (g << 2) + b) >> 3;
-
-    if (y < 125) {
-        return TRUE;
-    }
-
-    return FALSE;
-}
-
-
-
-// -----------------------------------------------------------------------------
-    static gboolean utils_parse_color(
-        const gchar *spec,
-        GdkColor *color
-    )
-/*
-
------------------------------------------------------------------------------ */
-{
-    gchar buf[64] = {0};
-
-    g_return_val_if_fail(spec != NULL, -1);
-
-    if (spec[0] == '0' && (spec[1] == 'x' || spec[1] == 'X'))
-    {
-        /* convert to # format for GDK to understand it */
-        buf[0] = '#';
-        strncpy(buf + 1, spec + 2, sizeof(buf) - 2);
-        spec = buf;
-    }
-
-    return gdk_color_parse(spec, color);
-}
-
-
-
-// -----------------------------------------------------------------------------
-    static gint utils_color_to_bgr(const GdkColor *c)
-/*
-
------------------------------------------------------------------------------ */
-{
-    g_return_val_if_fail(c != NULL, -1);
-    return (c->red / 256) | ((c->green / 256) << 8) | ((c->blue / 256) << 16);
-}
-
-
-
-// -----------------------------------------------------------------------------
-    static gint utils_parse_color_to_bgr(const gchar *spec)
-/*
-
------------------------------------------------------------------------------ */
-{
-    GdkColor color;
-    if (utils_parse_color(spec, &color)) {
-        return utils_color_to_bgr(&color);
-    }
-    else {
-        return -1;
     }
 }
 
@@ -1259,6 +1068,7 @@
 }
 
 
+
 // -----------------------------------------------------------------------------
     static std::string get_config_filename(void)
 /*
@@ -1275,116 +1085,6 @@
             NULL
         )
     );
-}
-
-
-
-// -----------------------------------------------------------------------------
-    static gboolean read_keyfile(
-        GKeyFile *kf,
-        std::string filename,
-        GKeyFileFlags flags
-    )
-/*
-    loads filename in kf and return %FALSE if failed, emitting a warning
-    unless the file was simply missing
------------------------------------------------------------------------------ */
-{
-    GError *error = NULL;
-    if (!g_key_file_load_from_file(kf, filename.c_str(), flags, &error)) {
-        if (error->domain != G_FILE_ERROR || error->code != G_FILE_ERROR_NOENT) {
-            g_debug("%s: Failed to load configuration file: %s", __FUNCTION__, error->message);
-        }
-        g_error_free (error);
-        return FALSE;
-    }
-
-    return TRUE;
-}
-
-
-
-// -----------------------------------------------------------------------------
-    static gboolean write_keyfile(
-        GKeyFile *kf,
-        std::string filename
-    )
-/*
-    loads filename in kf and return %FALSE if failed, emitting a warning
-    unless the file was simply missing
------------------------------------------------------------------------------ */
-{
-    gchar *dirname = g_path_get_dirname(filename.c_str());
-
-    gsize length;
-    gchar *data = g_key_file_to_data(kf, &length, NULL);
-
-    GError *error = NULL;
-    gint err;
-    gboolean success = FALSE;
-
-    if ((err = utils_mkdir(dirname, TRUE)) != 0) {
-        g_warning(
-            "Failed to create configuration directory \"%s\": %s",
-            dirname, g_strerror(err)
-        );
-    }
-    else if (!g_file_set_contents(filename.c_str(), data, (gssize)length, &error)) {
-        g_warning("Failed to save configuration file: %s", error->message);
-        g_error_free(error);
-    } else {
-        success = TRUE;
-    }
-
-    g_free(data);
-    g_free(dirname);
-    return success;
-}
-
-
-
-// -----------------------------------------------------------------------------
-    static void load_config(void)
-/*
-
------------------------------------------------------------------------------ */
-{
-    std::string filename = get_config_filename();
-    GKeyFile *kf = g_key_file_new();
-
-    g_debug("%s: Trying to load configuration file: %s", __FUNCTION__, filename.c_str());
-
-    if (read_keyfile(kf, filename, G_KEY_FILE_NONE)) {
-        for (auto &it : gPluginConfiguration.mPluginSettings) {
-            it->read(kf);
-        }
-    }
-    else {
-        g_debug("%s: No configuration file yet", __FUNCTION__);
-    }
-
-    g_key_file_free(kf);
-}
-
-
-// -----------------------------------------------------------------------------
-    static void save_config(void)
-/*
-
------------------------------------------------------------------------------ */
-{
-    std::string filename = get_config_filename();
-    GKeyFile *kf = g_key_file_new();
-
-    g_debug("%s: Trying to save configuration file: %s", __FUNCTION__, filename.c_str());
-    read_keyfile(kf, filename, G_KEY_FILE_KEEP_COMMENTS);
-
-    for (auto &it : gPluginConfiguration.mPluginSettings) {
-        it->write(kf);
-    }
-    write_keyfile(kf, filename);
-
-    g_key_file_free(kf);
 }
 
 
@@ -1441,7 +1141,7 @@
 
 
 // -----------------------------------------------------------------------------
-    static gboolean plugin_bracketcolors_init (
+    static gboolean plugin_bracketcolors_init(
         GeanyPlugin *plugin,
         gpointer pdata
     )
@@ -1454,7 +1154,7 @@
     geany_plugin = plugin;
     geany_data = plugin->geany_data;
 
-    load_config();
+    gPluginConfiguration.LoadConfig(get_config_filename());
 
     gboolean inInit = TRUE;
 
@@ -1493,7 +1193,7 @@
         on_document_close(NULL, documents[i], NULL);
     }
 
-    save_config();
+    gPluginConfiguration.SaveConfig(get_config_filename());
 }
 
 
@@ -1577,7 +1277,6 @@
     gchar *colorAsStr = gdk_color_to_string(&color);
     *strPtr = std::string(colorAsStr);
 
-    g_debug("%s: Got new color: %s", __FUNCTION__, strPtr->c_str());
     g_free(colorAsStr);
 
     update_colors();
