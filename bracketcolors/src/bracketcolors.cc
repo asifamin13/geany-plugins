@@ -674,19 +674,27 @@
         indiciesToRecompute.begin(), indiciesToRecompute.end()
     );
 
+    std::set<BracketMap::Index> newIndicies;
+    auto origBracketMap = bracketMap.mBracketMap;
+
     for (const auto &it : indiciesToAdjust) {
 
         /*
          * Move bracket, remove old position
          */
 
-        bracketMap.mBracketMap.insert(
-            std::make_pair(
-                it + length,
-                bracketMap.mBracketMap.at(it)
-            )
+        gint newIndex = it + length;
+
+        newIndicies.insert(newIndex);
+        bracketMap.mBracketMap.insert_or_assign(
+            newIndex,
+            origBracketMap.at(it)
         );
-        bracketMap.mBracketMap.erase(it);
+
+        // dont remove newly added indicies
+        if (newIndicies.find(it) == newIndicies.end()) {
+            bracketMap.mBracketMap.erase(it);
+        }
 
         /*
          * Check if new bracket was placed into position of old adjusted bracket
@@ -699,7 +707,6 @@
         ) {
             bracketColorsData.RemoveFromQueues(it);
         }
-
     }
 
     return TRUE;
