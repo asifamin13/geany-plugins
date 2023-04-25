@@ -49,8 +49,8 @@
         gpointer value
     );
 
-    virtual void read(GKeyFile *kf)=0;
-    virtual void write(GKeyFile *kf)=0;
+    virtual bool read(GKeyFile *kf)=0;
+    virtual bool write(GKeyFile *kf)=0;
 };
 
 
@@ -67,8 +67,8 @@
         gpointer value
     );
 
-    void read(GKeyFile *kf);
-    void write(GKeyFile *kf);
+    bool read(GKeyFile *kf);
+    bool write(GKeyFile *kf);
 };
 
 
@@ -85,8 +85,8 @@
         gpointer value
     );
 
-    void read(GKeyFile *kf);
-    void write(GKeyFile *kf);
+    bool read(GKeyFile *kf);
+    bool write(GKeyFile *kf);
 };
 
 

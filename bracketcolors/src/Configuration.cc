@@ -79,7 +79,7 @@
 
 
 // -----------------------------------------------------------------------------
-    void BooleanSetting::read(GKeyFile *kf)
+    bool BooleanSetting::read(GKeyFile *kf)
 /*
 
 ----------------------------------------------------------------------------- */
@@ -88,12 +88,13 @@
     *aBool = utils_get_setting_boolean(
         kf, mGroup.c_str(), mKey.c_str(), *aBool
     );
+    return true;
 }
 
 
 
 // -----------------------------------------------------------------------------
-    void BooleanSetting::write(GKeyFile *kf)
+    bool BooleanSetting::write(GKeyFile *kf)
 /*
 
 ----------------------------------------------------------------------------- */
@@ -102,12 +103,13 @@
     g_key_file_set_boolean(
         kf, mGroup.c_str(), mKey.c_str(), *aBool
     );
+    return true;
 }
 
 
 
 // -----------------------------------------------------------------------------
-    void ColorSetting::read(GKeyFile *kf)
+    bool ColorSetting::read(GKeyFile *kf)
 /*
 
 ----------------------------------------------------------------------------- */
@@ -121,22 +123,25 @@
     /*
      * Make sure the color is valid
      */
+    bool ret = false;
 
     GdkColor color;
     if (utils_parse_color(str, &color)) {
         *strPtr = std::string(str);
+        ret = true;
     }
     else {
         g_debug("%s: Failed to parse color '%s'", __FUNCTION__, str);
     }
 
     g_free(str);
+    return ret;
 }
 
 
 
 // -----------------------------------------------------------------------------
-    void ColorSetting::write(GKeyFile *kf)
+    bool ColorSetting::write(GKeyFile *kf)
 /*
 
 ----------------------------------------------------------------------------- */
@@ -145,6 +150,7 @@
     g_key_file_set_string(
         kf, mGroup.c_str(), mKey.c_str(), strPtr->c_str()
     );
+    return true;
 }
 
 
@@ -245,13 +251,22 @@
 ----------------------------------------------------------------------------- */
 {
     GKeyFile *kf = g_key_file_new();
+    bool success = true;
+
     if (read_keyfile(kf, fileName, G_KEY_FILE_NONE)) {
         for (auto &it : mPluginSettings) {
-            it->read(kf);
+            if (not it->read(kf)) {
+                success = false;
+            }
         }
     }
     else {
         g_debug("%s: Unable to load '%s''", __FUNCTION__, fileName.c_str());
+        success = false;
+    }
+
+    if (not success) {
+        mUseDefaults = true;
     }
 
     g_key_file_free(kf);
