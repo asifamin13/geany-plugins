@@ -1327,7 +1327,7 @@
     gtk_widget_set_margin_end(colorButtonGrid, 5);
     gtk_widget_set_margin_bottom(colorButtonGrid, 5);
 
-    GtkWidget *frame = gtk_frame_new("Bracket Colors");
+    GtkWidget *frame = gtk_frame_new(_("Bracket Colors"));
     gtk_container_add(GTK_CONTAINER(frame), colorButtonGrid);
 
     for (guint i = 0; i < BC_NUM_COLORS; i++) {
@@ -1355,7 +1355,7 @@
         0, 0, 1, 1
     );
 
-    GtkWidget *checkBox = gtk_check_button_new_with_label("Use Defaults");
+    GtkWidget *checkBox = gtk_check_button_new_with_label(_("Use Defaults"));
     gtk_grid_attach(
         GTK_GRID(grid), checkBox,
         0, 1, 1, 1
