@@ -30,19 +30,10 @@
 # include <locale.h>
 #endif
 
-#include <string>
-#include <array>
-#include <set>
-#include <map>
-#include <memory>
-
-#include <glib.h>
-
 #include <geanyplugin.h>
 #include "sciwrappers.h"
 
 #include "BracketMap.h"
-
 #include "Utils.h"
 #include "Configuration.h"
 
@@ -1184,8 +1175,6 @@
 
 ----------------------------------------------------------------------------- */
 {
-    g_log_set_writer_func(g_log_writer_default, NULL, NULL);
-
     geany_plugin = plugin;
     geany_data = plugin->geany_data;
 
