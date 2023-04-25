@@ -541,7 +541,7 @@
 
             for (auto position : positions) {
 
-                unsigned correctIndicatorIndex = sIndicatorIndex + \
+                guint correctIndicatorIndex = sIndicatorIndex + \
                     ((BracketMap::GetOrder(bracket) + i) % BC_NUM_COLORS);
 
                 gint curr = SSM(sci, SCI_INDICATORVALUEAT, correctIndicatorIndex, position);
@@ -731,7 +731,7 @@
 
     BracketMap &bracketMap = bracketColorsData.bracketMaps[type];
 
-    std::set<BracketMap::Index> indiciesToRemove, indiciesToRecompute;
+    std::set<BracketMap::Index> indiciesToRemove, indiciesToRecompute, orphanedIndicies;
 
     for (const auto &it : bracketMap.mBracketMap) {
         const auto &bracket = it.second;
@@ -739,9 +739,17 @@
         // start bracket was deleted
         if ( (it.first >= position) and (it.first < position + length) ) {
             indiciesToRemove.insert(it.first);
+            // if the end bracket is valid and still present
+            if (endPos > it.first and endPos >= (position + length)) {
+                orphanedIndicies.insert(endPos - length);
+            }
         }
         // end bracket removed or space removed
-        else if (it.first >= position or endPos >= position) {
+        else if (
+            it.first >= position or
+            endPos >= position or
+            BracketMap::GetLength(bracket) == BracketMap::UNDEFINED
+        ) {
             indiciesToRecompute.insert(it.first);
         }
     }
@@ -773,6 +781,11 @@
             bracketColorsData.recomputeIndicies.insert(it);
         }
     }
+
+    // for orphaned end brackets, just recompute them
+    bracketColorsData.recomputeIndicies.insert(
+        orphanedIndicies.begin(), orphanedIndicies.end()
+    );
 
     return TRUE;
 }
@@ -954,7 +967,7 @@
 
 ----------------------------------------------------------------------------- */
 {
-    static const unsigned sIterationLimit = 50;
+    static const guint sIterationLimit = 50;
 
     if (not has_document()) {
         return FALSE;
@@ -975,7 +988,7 @@
 
         ScintillaObject *sci = data->doc->editor->sci;
 
-        unsigned numIterations = 0;
+        guint numIterations = 0;
         for (
             auto position = data->recomputeIndicies.begin();
             position != data->recomputeIndicies.end();
@@ -1005,14 +1018,19 @@
                         data->updateUI = TRUE;
                     }
                 }
-
-                std::set<BracketMap::Index> updatedBrackets = bracketMap.ComputeOrder();
-                data->redrawIndicies.insert(updatedBrackets.begin(), updatedBrackets.end());
             }
 
             position = data->recomputeIndicies.erase(position);
             if (numIterations >= sIterationLimit) {
                 break;
+            }
+        }
+
+        if (data->updateUI) {
+            for (gint bracketType = 0; bracketType < BracketType::COUNT; bracketType++) {
+                BracketMap &bracketMap = data->bracketMaps[bracketType];
+                std::set<BracketMap::Index> updatedBrackets = bracketMap.ComputeOrder();
+                data->redrawIndicies.insert(updatedBrackets.begin(), updatedBrackets.end());
             }
         }
     }
