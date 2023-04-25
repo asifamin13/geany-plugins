@@ -213,11 +213,15 @@
 
 
 // -----------------------------------------------------------------------------
-    BracketColorsPluginConfiguration::BracketColorsPluginConfiguration()
+    BracketColorsPluginConfiguration::BracketColorsPluginConfiguration(
+        gboolean useDefaults,
+        BracketColorArray colors
+    )
 /*
 
 ----------------------------------------------------------------------------- */
-:   mColors(sLightBackgroundColors),
+:   mUseDefaults(useDefaults),
+    mColors(colors),
     mCustomColors(mColors)
 {
     mPluginSettings.push_back(
@@ -245,6 +249,9 @@
         for (auto &it : mPluginSettings) {
             it->read(kf);
         }
+    }
+    else {
+        g_debug("%s: Unable to load '%s''", __FUNCTION__, fileName.c_str());
     }
 
     g_key_file_free(kf);

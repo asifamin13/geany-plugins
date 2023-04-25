@@ -119,7 +119,7 @@
 
 /* ---------------------------------- GLOBALS ------------------------------- */
 
-    BracketColorsPluginConfiguration gPluginConfiguration;
+    static BracketColorsPluginConfiguration gPluginConfiguration(TRUE, sLightBackgroundColors);
 
 /* ---------------------------------- EXTERNS ------------------------------- */
 

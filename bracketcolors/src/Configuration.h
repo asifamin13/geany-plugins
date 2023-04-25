@@ -103,7 +103,10 @@
 
     std::vector<std::shared_ptr<BracketColorsPluginSetting> > mPluginSettings;
 
-    BracketColorsPluginConfiguration();
+    BracketColorsPluginConfiguration(
+        gboolean useDefaults,
+        BracketColorArray colors
+    );
 
     void LoadConfig(std::string fileName);
     void SaveConfig(std::string fileName);
