@@ -113,10 +113,23 @@
 ----------------------------------------------------------------------------- */
 {
     std::string *strPtr = reinterpret_cast<std::string *>(mValue);
+
     gchar *str = utils_get_setting_string(
         kf, mGroup.c_str(), mKey.c_str(), strPtr->c_str()
     );
-    *strPtr = std::string(str);
+
+    /*
+     * Make sure the color is valid
+     */
+
+    GdkColor color;
+    if (utils_parse_color(str, &color)) {
+        *strPtr = std::string(str);
+    }
+    else {
+        g_debug("%s: Failed to parse color '%s'", __FUNCTION__, str);
+    }
+
     g_free(str);
 }
 
