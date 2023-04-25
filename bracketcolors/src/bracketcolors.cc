@@ -761,11 +761,9 @@
     for (const auto &it : indiciesToRecompute) {
         // first bracket was moved backwards
         if (it >= position) {
-            bracketMap.mBracketMap.insert(
-                std::make_pair(
-                    it - length,
-                    bracketMap.mBracketMap.at(it)
-                )
+            bracketMap.mBracketMap.insert_or_assign(
+                it - length,
+                bracketMap.mBracketMap.at(it)
             );
             bracketMap.mBracketMap.erase(it);
             bracketColorsData.RemoveFromQueues(it);
